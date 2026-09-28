@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PLW BOOKER</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3eefb;--card:#fff;--tx:#1a1030;--mut:#6b5e86;--ln:#d9cdee;--p:#6A0DAD;--b:#00A6FB;--o:#FF6B00;--g:#d4a017;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#07050d;--card:#130c22;--tx:#f4eeff;--mut:#9b8bb8;--ln:#2b1b47;--g:#ffd24a}}
+:root[data-theme="dark"]{--bg:#07050d;--card:#130c22;--tx:#f4eeff;--mut:#9b8bb8;--ln:#2b1b47;--g:#ffd24a}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 Inter,system-ui,sans-serif;padding-bottom:110px}
+h1,h2,h3{font-family:'Bebas Neue',Impact,sans-serif;letter-spacing:.06em;margin:0;font-weight:400}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--ln)}
+.logo{padding:10px 14px 0;font-size:30px;background:linear-gradient(90deg,#b44dff,#00A6FB,#FF6B00);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 24px #6A0DAD55}
+nav{display:flex;gap:6px;overflow-x:auto;padding:8px 10px}
+nav button{flex:none;border:1px solid var(--ln);background:var(--card);color:var(--mut);padding:7px 11px;border-radius:99px;font:600 13px Inter,sans-serif;cursor:pointer}
+nav button.on{color:#fff;background:linear-gradient(90deg,#6A0DAD,#b4128f);border-color:transparent;box-shadow:0 0 14px #6A0DAD99}
+main{padding:12px;max-width:760px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--ln);border-left:4px solid var(--c,var(--p));border-radius:14px;padding:12px;margin-bottom:10px;overflow-wrap:anywhere}
+.card h3{font-size:22px}
+.sec{font-family:'Bebas Neue',Impact,sans-serif;font-size:22px;letter-spacing:.08em;margin:18px 0 8px;color:var(--g)}
+.mut{color:var(--mut);font-size:13px}
+.tag{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--c,var(--p));color:#fff;margin-right:6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.hero .card{margin:0;border-left-width:1px;background:linear-gradient(160deg,var(--card),#2a0a4a55)}
+input,textarea,select{width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--ln);border-radius:10px;padding:9px;font:inherit;margin:3px 0}
+textarea{min-height:64px}
+.btn{border:0;border-radius:12px;padding:11px 14px;font:800 14px Inter,sans-serif;cursor:pointer;color:#fff;background:linear-gradient(90deg,#6A0DAD,#b4128f)}
+.btn.g{background:#1f8a4c}.btn.r{background:#b3261e}.btn.o{background:#FF6B00}.btn.s{background:var(--card);color:var(--tx);border:1px solid var(--ln)}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+.fab{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9;padding:16px 20px;border-radius:99px;font:800 16px Inter,sans-serif;box-shadow:0 0 26px #b4128fcc,0 6px 20px #0008}
+.sheet{position:fixed;inset:0;z-index:20;background:var(--bg);overflow:auto;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(30px + env(safe-area-inset-bottom,0px))}
+.drop{border:2px dashed var(--p);border-radius:16px;padding:26px 12px;text-align:center;margin:10px 0;background:#6A0DAD14}
+.bub{padding:9px 12px;border-radius:14px;margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.bub.u{background:#6A0DAD;color:#fff;margin-left:24px}.bub.a{background:var(--card);border:1px solid var(--ln);margin-right:24px}
+.fact{color:#3ddc84;font-weight:800}.sug{color:var(--o);font-weight:800}
+.st{color:var(--g)}
+.spin{animation:pl 1.2s infinite}@keyframes pl{50%{opacity:.35}}
+.toast{position:fixed;left:12px;right:12px;bottom:90px;z-index:30;background:linear-gradient(90deg,#6A0DAD,#00A6FB);color:#fff;padding:14px;border-radius:14px;font-weight:800;text-align:center;box-shadow:0 0 30px #6A0DADaa}
+.lk{color:var(--g);cursor:pointer;text-decoration:underline dotted}
+</style>
+</head>
+<body>
+<header><button class="btn s" id="qsb" title="Buscar lutador" style="position:absolute;right:10px;top:10px;padding:8px 12px" onclick="openQS()">🔎</button><div class="logo"><h1 style="font-size:34px">PLW BOOKER</h1></div><nav id="nav"></nav></header>
+<main id="v"></main>
+<button class="btn fab" id="fab">📸 ENVIAR PRINT</button>
+<div id="sheet" class="sheet" hidden></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TITLES=[['PLW World Championship','GLOBAL'],['PLW World Tag Team Championship','GLOBAL'],['PLWAR Crown Championship','PLWAR'],['PLWAR Ace Championship','PLWAR'],['PLW Motion Next Level Championship','MOTION'],['PLW Motion Rising Championship','MOTION'],['PLW Show Off Championship','SHOW OFF']];
+const CAL0=['COLISEUM','EYE TO EYE','BLACKOUT','HIGH OFF LIFE','PURPLE REIGN','','NEW LEVEL','AUGUST MADNESS','RAINDROPS','BEAST MODE','PURPLE COLLISION','FINAL BATTLE'];
+const MES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const TABS=[['dash','🏠','Dashboard'],['shows','📺','Shows'],['ppvs','🏟️','PPVs'],['roster','👥','Roster'],['champs','🏆','Champions'],['brands','🎨','Brands'],['tags','🤝','Tag Teams'],['facs','🔥','Factions'],['riv','⚔️','Rivalries'],['hist','📖','History'],['jj','🧠','J.J. Purple'],['hal','🤖','HAL Mercer'],['tony','🎩','Tony The Boss'],['dirk','📰','Dirk The Truth'],['plan','📝','Planos'],['sys','⚙️','Sistema']];
+let S={events:[],titles:{},roster:{},stories:[],plans:[],cal:CAL0.slice(),nextShow:'',nextPPV:'',notes:{},month:''};
+let tab='dash',db=null,sample=null,draft=null,edit=false,files=[],chats={jj:[],hal:[],tony:[],dirk:[],hist:[]},busy=false,q='',mode='show';
+function bc(b){b=String(b||'').toUpperCase();if(b.includes('MOTION'))return'#00A6FB';if(b.includes('SHOW'))return'#FF6B00';if(b.includes('WAR'))return'#6A0DAD';return'#d4a017'}
+function norm(x){x=x||{};return{plans:x.plans||[],events:x.events||[],titles:x.titles||{},roster:x.roster||{},stories:x.stories||[],planBoard:x.planBoard||{mensal:'',anual:'',ppv:''},cal:x.cal&&x.cal.length===12?x.cal:CAL0.slice(),nextShow:x.nextShow||'',nextPPV:x.nextPPV||'',notes:x.notes||{},month:x.month||''}}
+function loadLocal(){try{const j=localStorage.getItem('plw-save');if(j)S=norm(JSON.parse(j))}catch(e){}}
+function persist(){const j=JSON.stringify(S);try{localStorage.setItem('plw-save',j)}catch(e){}if(db)db.doc('plw/save').set({json:j}).catch(()=>{})}
+function toast(t,ms){const e=$('#toast');e.textContent=t;e.hidden=false;setTimeout(()=>e.hidden=true,ms||3500)}
+function stars(r){if(r==null||r==='')return'';const n=parseFloat(r);if(isNaN(n))return esc(r);return'<span class="st">'+'★'.repeat(Math.floor(n))+(n%1>=.5?'½':'')+'</span>'}
+function mline(m){const draw=/empate|draw/i.test(m.winner||'');const t=m.championship?` <span class="tag" style="--c:${bc(titleBrand(m.championship))}">🏆 ${esc(m.championship)}${m.title_change?' • MUDOU':''}</span>`:'';const main=draw?`<b>${esc((m.participants||[]).join(' vs '))}</b> terminou em empate`:`<b>${esc(m.winner)}</b> derrotou ${esc(m.loser||(m.participants||[]).filter(p=>p!==m.winner).join(', '))}`;return`<div class="card" style="--c:${bc(m.brand)}">${main} ${stars(m.rating)}<div class="mut">${esc(m.stipulation||'')}${m.notes?' • '+esc(m.notes):''}</div>${t}</div>`}
+function titleBrand(n){const t=TITLES.find(x=>x[0]===n);return t?t[1]:''}
+function allMatches(){const a=[];S.events.forEach(e=>(e.matches||[]).forEach(m=>a.push({...m,brand:e.brand,ev:e.name,date:e.date})));return a}
+function groups(type){const g={};S.stories.filter(s=>s.type===type).forEach(s=>{const k=s.team||(s.names||[]).slice().sort().join(' × ')||s.text.slice(0,30);(g[k]=g[k]||[]).push(s)});return g}
+function nav(){$('#nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" onclick="go('${t[0]}')">${t[1]} ${t[2]}</button>`).join('')}
+function go(t){tab=t;nav();render();scrollTo(0,0)}
+function champCard(t){const c=S.titles[t[0]]||{};const last=(c.hist||[]).slice(-1)[0];const ri=Object.keys(S.roster).sort();const tg=Object.keys(groups('tag'));const i=TITLES.indexOf(t);
+return`<div class="card" style="--c:${bc(t[1])}"><span class="tag" style="--c:${bc(t[1])}">${t[1]}</span><div class="mut">${esc(t[0])}</div><h3>${esc(c.champ||'VAGO')}</h3>${c.champ&&chB(c.champ)?`<div class="mut">📍 ${chB(c.champ)}</div>`:''}${last?`<div class="mut">desde ${esc(last.date||last.event||'')}</div>`:''}<select onchange="setChamp(${i},this.value)"><option value="">— trocar campeão —</option><option value="__vago">VAGO</option>${ri.length?`<optgroup label="Lutadores">${ri.map(n=>`<option>${esc(n)}</option>`).join('')}</optgroup>`:''}${tg.length?`<optgroup label="Tag teams">${tg.map(n=>`<option>${esc(n)}</option>`).join('')}</optgroup>`:''}<option value="__outro">Digitar outro nome...</option></select></div>`}
+function storyHtml(k,list){const l=list[list.length-1];return`<div class="card"><h3>${esc(k)}</h3><div>${esc(l.text)}</div><div class="mut">${list.length} registro(s) • última: ${esc(l.event||'')}</div></div>`}
+function vDash(){
+const rv=Object.entries(groups('rivalry')).slice(-5).reverse();
+const lm=allMatches().slice(-6).reverse();
+const tc=[];S.events.forEach(e=>(e.matches||[]).forEach(m=>{if(m.title_change)tc.push({...m,ev:e.name})}));
+return`<div class="card" style="--c:#b4128f"><div class="mut">PRÓXIMO PPV</div><h3>${nextPPV()}</h3></div>
+<div class="sec">CAMPEÕES ATUAIS</div><div class="grid">${TITLES.map(champCard).join('')}</div>
+<div class="sec">PRINCIPAIS RIVALIDADES</div>${rv.map(([k,l])=>storyHtml(k,l)).join('')||'<div class="mut">Nenhuma rivalidade registrada ainda.</div>'}
+<div class="sec">ÚLTIMOS RESULTADOS</div>${lm.map(mline).join('')||'<div class="mut">Envie o primeiro print para começar o histórico.</div>'}
+<div class="sec">ÚLTIMAS MUDANÇAS DE TÍTULO</div>${tc.slice(-4).reverse().map(m=>`<div class="card" style="--c:${bc(titleBrand(m.championship))}"><b>${esc(m.new_champion||m.winner)}</b> conquistou o ${esc(m.championship)}<div class="mut">${esc(m.ev)}</div></div>`).join('')||'<div class="mut">Sem trocas de cinturão registradas.</div>'}`}
+function evCard(e){return`<details class="card" style="--c:${bc(e.brand)}"><summary><b>${esc(e.name)}</b> <span class="mut">${esc(e.date||'')} • ${esc(e.brand||'')}</span><div class="mut">Público ${esc(e.attendance??'—')} • Hype ${esc(e.hype??'—')} • Coins ${esc(e.coins??'—')} • ${stars(e.rating)}</div></summary>${(e.matches||[]).map(mline).join('')}${(e.stories||[]).map(s=>`<div class="mut">• ${esc(s.text)}</div>`).join('')}</details>`}
+function vShows(){const l=S.events.filter(e=>e.type!=='ppv').slice().reverse();return`<div class="sec">SHOWS SEMANAIS</div>${l.map(evCard).join('')||'<div class="mut">Nenhum show registrado.</div>'}`}
+function vPpvs(){const l=S.events.filter(e=>e.type==='ppv').slice().reverse();return`<div class="sec">CALENDÁRIO DE PPVs</div><div class="card">${S.cal.map((n,i)=>`<div class="row" style="align-items:center"><span class="mut" style="flex:0 0 90px">${MES[i]}</span><input value="${esc(n)}" placeholder="consultar a save" onchange="S.cal[${i}]=this.value;persist()"></div>`).join('')}</div><div class="sec">PPVs REALIZADOS</div>${l.map(evCard).join('')||'<div class="mut">Nenhum PPV registrado.</div>'}`}
+function vChamps(){return`<div class="sec">CAMPEÕES</div>${TITLES.map(t=>{const c=S.titles[t[0]]||{};return champCard(t)+((c.hist||[]).length?`<details class="card" style="--c:${bc(t[1])}"><summary>Histórico (${c.hist.length})</summary>${c.hist.slice().reverse().map(h=>`<div>${esc(h.name)} <span class="mut">— ${esc(h.event||'')} ${esc(h.date||'')}</span></div>`).join('')}</details>`:'')}).join('')}`}
+function vStory(type,title,ic){const g=Object.entries(groups(type));return`<div class="sec">${ic} ${title}</div>${g.map(([k,l])=>`<details class="card"><summary><h3 style="display:inline">${esc(k)}</h3> <span class="mut">${l.length} registro(s)</span></summary>${l.map(s=>`<div>• ${esc(s.text)} <span class="mut">(${esc(s.event||'')})</span></div>`).join('')}</details>`).join('')||'<div class="mut">Nada registrado ainda.</div>'}`}
+function digest(){const ro=Object.entries(S.roster).map(([n,w])=>`${n} (${w.brand||'?'}${w.alignment?' '+w.alignment:''}${w.inj?' LESIONADO '+w.inj:''}) ${w.w}V-${w.l}D`).join('; ');
+const ev=S.events.slice(-40).map(e=>`[${e.type==='ppv'?'PPV':'SHOW'}] ${e.name} ${e.date||''} ${e.brand||''} público:${e.attendance??'?'} hype:${e.hype??'?'} rating:${e.rating??'?'} coins:${e.coins??'?'}\n`+(e.matches||[]).map(m=>`  - ${m.participants?.join(' vs ')||''} | vencedor: ${m.winner||'?'} | ${m.stipulation||''} | ${m.championship||''}${m.title_change?' (MUDANÇA DE TÍTULO)':''} | ${m.rating??''}★ ${m.notes||''}`).join('\n')).join('\n');
+const st=S.stories.slice(-80).map(s=>`(${s.type}) ${(s.names||[]).join(', ')}: ${s.text} [${s.event||''}]`).join('\n');
+const ti=TITLES.map(t=>`${t[0]}: ${(S.titles[t[0]]||{}).champ||'vago'}`).join('\n');
+return`CAMPEÕES:\n${ti}\n\nROSTER:\n${ro||'vazio'}\n\nEVENTOS:\n${ev||'nenhum'}\n\nSTORYLINES:\n${st||'nenhuma'}\n\nCALENDÁRIO PPV: ${S.cal.map((n,i)=>MES[i]+': '+(n||'?')).join(', ')}\n\nPLANOS (rascunhos do usuário, são SUGESTÕES e NÃO fatos): ${S.plans.map(p=>p.t+': '+p.x).join(' | ')||'nenhum'}\n\nNOTAS POR LUTADOR (planos = sugestões): ${Object.entries(S.notes||{}).filter(([,v])=>v.cur||v.plan).map(([n,v])=>n+' | mês: '+v.cur+' | plano: '+v.plan).join(' || ')||'nenhuma'}`.slice(0,K.engine==='ollama'?8000:58000)}
+function ollamaContext(q){
+ const query=String(q||'').toLowerCase();
+ const compact=[];
+ compact.push('CAMPEÕES ATUAIS: '+TITLES.map(t=>`${t[0]}: ${((S.titles[t[0]]||{}).champ)||'vago'}`).join(' | '));
+ compact.push('PRÓXIMO PPV: '+nextPPV());
+ const ppv=S.events.filter(e=>e.type==='ppv').slice(-1);
+ const recent=S.events.filter(e=>e.type!=='ppv').slice(-4);
+ const events=[...ppv,...recent];
+ if(events.length){
+  compact.push('EVENTOS RECENTES:');
+  events.forEach(e=>{
+   const ms=(e.matches||[]).slice(-10).map(m=>`${(m.participants||[]).join(' vs ')} -> ${m.winner||'?'}${m.championship?' ['+m.championship+(m.title_change?' MUDOU':'')+']':''}`).join('; ');
+   compact.push(`${e.type==='ppv'?'PPV':'SHOW'} ${e.name||''} ${e.date||''}: ${ms||'sem lutas registradas'}`);
+  });
+ }
+ const rivals=S.stories.filter(s=>s.type==='rivalry').slice(-10);
+ if(rivals.length)compact.push('RIVALIDADES ATUAIS: '+rivals.map(s=>`${(s.names||[]).join(' x ')}: ${s.text}`).join(' | '));
+ const mentioned=Object.keys(S.roster).filter(n=>query.includes(n.toLowerCase()));
+ const champs=TITLES.map(t=>(S.titles[t[0]]||{}).champ).filter(Boolean);
+ const rivalNames=rivals.flatMap(s=>s.names||[]);
+ const recentNames=S.events.slice(-5).flatMap(e=>(e.matches||[]).flatMap(m=>m.participants||[]));
+ const wanted=new Set([...mentioned,...champs,...rivalNames,...recentNames]);
+ const roster=Object.entries(S.roster).filter(([n])=>wanted.has(n)).slice(0,28);
+ if(roster.length)compact.push('ROSTER RELEVANTE: '+roster.map(([n,w])=>`${n} (${w.brand||'?'} ${w.alignment||''} ${w.w||0}V-${w.l||0}D${w.status&&w.status!=='ativo'?' '+w.status:''})`).join('; '));
+ const hist=S.events.slice(-8).flatMap(e=>(e.matches||[]).map(m=>`${e.name}: ${(m.participants||[]).join(' vs ')} -> ${m.winner||'?'}`)).slice(-18);
+ if(hist.length)compact.push('HISTÓRICO RECENTE: '+hist.join(' | '));
+ return compact.join('\n').slice(0,9000);
+}
+const BOT=new Proxy({},{get:()=>K.engine});
+const PERS={
+jj:`Você é J.J. Purple, parceiro de booking da Purple League Wrestling (PLW).
+
+Fale em português brasileiro, de forma informal, natural e direta.
+Você é criativo, mas não concorda automaticamente com o usuário.
+Pode dizer quando uma ideia é ruim e explicar brevemente por quê.
+
+Sua função: criar cards; sugerir rivalidades e challengers; criar storylines; pensar em consequências; planejar PPVs e shows; analisar booking.
+Pense no longo prazo e respeite a continuidade da PLW.
+
+FACT = algo registrado nos dados. SUGGESTION = proposta futura. Nunca invente acontecimentos.
+Só use FACT: e SUGGESTION: quando ambos forem necessários. Em conversa casual, não use essas etiquetas.
+Pergunta simples = resposta simples. Não faça textos longos sem necessidade.
+NUNCA escreva raciocínio interno, pensamentos em inglês nem tags <think>. Comece já com a resposta.`,
+hal:`Você é HAL Mercer, jornalista independente especializado em wrestling e observador da Purple League Wrestling (PLW).
+
+Fale em português brasileiro. Seja analítico, direto e crítico. Não elogie só para agradar.
+
+Sua função: avaliar shows e PPVs; analisar qualidade do booking; criticar decisões; analisar uso do roster; rivalidades; importância dos títulos; pacing e continuidade.
+
+Diferencie qualidade das lutas de qualidade do booking. Não invente acontecimentos.
+FACT = registrado. SUGGESTION = possibilidade futura.
+Responda de forma proporcional à pergunta. Não escreva textos enormes sem necessidade.
+NUNCA escreva raciocínio interno, pensamentos em inglês nem tags <think>. Comece já com a resposta.`,
+tony:`Você é Tony The Boss, booker veterano e parceiro criativo da Purple League Wrestling (PLW).
+
+Fale em português brasileiro, com confiança e experiência. Seja direto, pragmático e criativo.
+
+Sua função: construir cards; criar rivalidades; desenvolver wrestlers; planejar reinados; longo prazo; surpresas; estruturar PPVs.
+Não concorde automaticamente. Se uma ideia prejudicar a PLW, diga e explique breve.
+
+Priorize: continuidade, desenvolvimento, importância dos títulos, variedade, consequências.
+FACT = registrado. SUGGESTION = proposta futura. Nunca invente fatos.
+Pergunta simples = resposta simples.
+NUNCA escreva raciocínio interno, pensamentos em inglês nem tags <think>. Comece já com a resposta.`,
+dirk:`Você é Dirk The Truth, jornalista severo e crítico de wrestling que acompanha a Purple League Wrestling (PLW).
+
+Fale em português brasileiro. Seja direto, seco e crítico. Não passe pano.
+
+Sua função: apontar decisões ruins; desperdício de talento; reinados fracos; mudanças de título; rivalidades mal construídas; pacing; repetição; uso do roster; consequências.
+
+Toda crítica baseada nos fatos registrados. FACT = registrado. SUGGESTION = proposta futura. Nunca invente.
+Se foi ruim, diga e explique rápido. Se foi bom, reconheça sem exagerar.
+Pergunta simples = resposta curta.
+NUNCA escreva raciocínio interno, pensamentos em inglês nem tags <think>. Comece já com a resposta.`,
+hist:`Você é o arquivista da PLW. Responda usando SOMENTE os registros. Se faltar informação, diga que não há registro. Português do Brasil, direto. NUNCA raciocínio interno nem <think>.`
+};
+
+function needsData(t){
+t=String(t||'').trim().toLowerCase();
+if(!t)return false;
+if(/^(oi|olá|ola|e aí|e ai|fala|hey|hi|hello|bom dia|boa tarde|boa noite|tudo bem|td bem|beleza|valeu|obrigad[oa]|thanks|ok|blz|eae|salve)[\s!?.]*$/i.test(t))return false;
+if(t.length<=12&&!/\b(ppv|show|título|titulo|campeão|campeao|rival|card|roster|brand|feud|vs|luta|match|reinado|challenger)\b/i.test(t))return false;
+return true;
+}
+function shortDigest(q){
+const t=String(q||'').toLowerCase();
+const parts=[];
+parts.push('CAMPEÕES: '+TITLES.map(x=>x[0].replace(/^PLW(AR)? /i,'')+': '+((S.titles[x[0]]||{}).champ||'vago')).join('; '));
+parts.push('PRÓXIMO PPV: '+nextPPV());
+const names=Object.keys(S.roster).filter(n=>t.includes(n.toLowerCase()));
+if(names.length){
+names.slice(0,4).forEach(n=>{
+const w=S.roster[n]||{},p=pst(n);
+parts.push(n+': '+(w.brand||'?')+' '+(w.alignment||'')+' '+(w.w||0)+'V-'+(w.l||0)+'D status:'+(w.status||'ativo')+(w.inj?' inj:'+w.inj:''));
+const recent=p.mm.slice(-4).map(m=>m.ev+': '+(sd(m,n)==='w'?'W':'L')+' vs '+opp(m,n).join(','));
+if(recent.length)parts.push('  recentes: '+recent.join(' | '));
+});
+}
+const evs=S.events.filter(e=>e.name&&t.includes(String(e.name).toLowerCase())).slice(-3);
+if(evs.length){
+evs.forEach(e=>{
+parts.push('['+(e.type==='ppv'?'PPV':'SHOW')+'] '+e.name+' '+(e.date||'')+' '+(e.brand||'')+' rating:'+(e.rating??'?'));
+(e.matches||[]).slice(0,12).forEach(m=>parts.push('  '+(m.participants||[]).join(' vs ')+' → '+(m.winner||'?')+(m.championship?' ['+m.championship+(m.title_change?' MUDOU':'')+']':'')));
+});
+}
+if(!names.length&&!evs.length&&/\b(card|ppv|show|rival|book|plano|próximo|proximo|desaf|challenger|título|titulo)\b/i.test(t)){
+const last=S.events.slice(-6);
+last.forEach(e=>{
+const sum=((e.matches||[]).map(m=>(m.winner||'?')+(m.championship?'*':'')).join(', '));
+parts.push('['+(e.type==='ppv'?'PPV':'SHOW')+'] '+e.name+' '+(e.date||'')+' → '+sum);
+});
+const riv=Object.entries(groups('rivalry')).filter(([,l])=>!/encerrada/i.test((l[l.length-1]||{}).text||'')).slice(-8);
+if(riv.length)parts.push('RIVALIDADES: '+riv.map(([k])=>k).join('; '));
+}
+const b=S.planBoard||{};
+if(/\b(plano|ideia|ppv|card)\b/i.test(t)&&(b.ppv||b.mensal))parts.push('PLANOS USER (sugestão): PPV:'+(b.ppv||'-').slice(0,400)+' | mensal:'+(b.mensal||'-').slice(0,200));
+return parts.join('\n').slice(0,3500);
+}
+async function ask(key,text,box){
+if(!sample){box.textContent='IA indisponível nesta visualização.';return}
+const h=chats[key];h.push({r:'u',t:text});const a={r:'a',t:''};h.push(a);busy=true;render();
+const conv=h.slice(0,-2).slice(-6).map(x=>(x.r==='u'?'Usuário: ':'Você: ')+x.t).join('\n');
+const want=needsData(text);
+const data=want?shortDigest(text):'';
+const p=want
+?('Use só os dados abaixo. Não invente fatos. Resposta curta e direta.\n\n=== DADOS PLW ===\n'+data+'\n\n=== CONVERSA ===\n'+conv+'\nUsuário: '+text+'\nVocê:')
+:('Conversa casual. Responda curto e natural, em português.\n\n=== CONVERSA ===\n'+conv+'\nUsuário: '+text+'\nVocê:');
+try{await sample(p,{engine:BOT[key],system:PERS[key],onText:x=>{a.t=x.text;upd(key)},maxTok:want?500:120})}catch(e){a.t=a.t||('Erro: '+(e.message||e.code))}
+busy=false;render()}
+function upd(key){const b=$('#chat-'+key+' .a:last-child');if(b)b.textContent=chats[key].slice(-1)[0].t}
+function vChat(key,title,hint){const h=chats[key];return`<div class="sec">${title}</div><div class="mut">${hint}</div><div id="chat-${key}">${h.map(x=>`<div class="bub ${x.r}">${esc(x.t)||'<span class=spin>…</span>'}</div>`).join('')}</div><div class="row" style="margin-top:8px"><input id="in-${key}" placeholder="Pergunte algo..." onkeydown="if(event.key==='Enter')send('${key}')"><button class="btn" style="flex:0 0 auto" ${busy?'disabled':''} onclick="send('${key}')">Enviar</button></div>`}
+function send(key){const i=$('#in-'+key);const t=i.value.trim();if(!t||busy)return;i.value='';ask(key,t)}
+function vHist(){const t=q.toLowerCase();const hit=t?allMatches().filter(m=>JSON.stringify(m).toLowerCase().includes(t)).slice(-30).reverse():[];const st=t?S.stories.filter(s=>JSON.stringify(s).toLowerCase().includes(t)).slice(-20).reverse():[];
+return`<div class="sec">🔍 PESQUISAR NA HISTÓRIA</div><div class="row"><input id="qi" value="${esc(q)}" placeholder="Wrestler, título, PPV, rivalidade..." onkeydown="if(event.key==='Enter'){q=this.value;render()}"><button class="btn s" style="flex:0 0 auto" onclick="q=$('#qi').value;render()">Buscar</button></div>
+<div class="row" style="margin:6px 0"><button class="btn o" onclick="const v=$('#qi').value.trim();if(v&&!busy)ask('hist',v)">🧠 Perguntar à história</button></div>
+<div id="chat-hist">${chats.hist.map(x=>`<div class="bub ${x.r}">${esc(x.t)||'<span class=spin>…</span>'}</div>`).join('')}</div>
+${hit.map(mline).join('')}${st.map(s=>`<div class="card"><span class="tag">${esc(s.type)}</span>${esc(s.text)}<div class="mut">${esc(s.event||'')}</div></div>`).join('')}
+<div class="sec">TIMELINE</div>${S.events.slice().reverse().map(evCard).join('')||'<div class="mut">Sem eventos.</div>'}`}
+function render(){const m={dash:vDash,shows:vShows,ppvs:vPpvs,roster:vRoster,champs:vChamps,brands:vBrands,tags:()=>vG('tag','TAG TEAMS','🤝'),facs:()=>vG('faction','FACTIONS','🔥'),riv:()=>vG('rivalry','RIVALIDADES','⚔️'),hist:vHist,jj:()=>vChat('jj','🧠 J.J. PURPLE','Booker parceiro'),hal:()=>vChat('hal','🤖 HAL MERCER','Jornalista independente'),tony:()=>vChat('tony','🎩 TONY THE BOSS','Booker veterano'),dirk:()=>vChat('dirk','📰 DIRK THE TRUTH','Crítico severo'),plan:vPlan,sys:vSys};
+const y=scrollY;$('#v').innerHTML=m[tab]();scrollTo(0,y)}
+function openSheet(h){const s=$('#sheet');s.innerHTML=h;s.hidden=false}
+function closeSheet(){$('#sheet').hidden=true;draft=null;files=[];edit=false}
+function upSheet(msg){return`<h2 style="font-size:30px">${mode==='roster'?'👥 IMPORTAR ROSTER':'📸 ENVIAR PRINT DO SHOW'}</h2><div class="drop" id="drop" ondragover="event.preventDefault()" ondrop="event.preventDefault();addFiles(event.dataTransfer.files)"><div style="font-size:40px">🖼️</div><div>${files.length?files.length+' imagem(ns) selecionada(s)':'Arraste os prints aqui ou toque abaixo'}</div><div class="row" style="margin-top:10px"><label class="btn" style="position:relative;display:block;text-align:center;overflow:hidden">Escolher / tirar foto<input id="fi" type="file" accept="image/*" multiple onchange="addFiles(this.files)" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:200px"></label></div></div>
+<textarea id="txt" placeholder="Ou cole aqui o texto (resultados ou lista do roster)..."></textarea>${mode==='roster'?'<select id="rb"><option value="">Brand: detectar automaticamente</option><option>PLWAR</option><option>PLW MOTION</option><option>PLW SHOW OFF</option></select>':'<input id="desc" placeholder="Descrição opcional — ex.: Weekly Show — Semana 3"><select id="ty"><option value="">Tipo: detectar automaticamente</option><option value="weekly">Weekly Show</option><option value="ppv">PPV</option></select>'}
+<div class="row" style="margin-top:10px"><button class="btn s" onclick="closeSheet()">Cancelar</button>${mode==='roster'?'':`<button class="btn s" onclick="draft={event:{name:'',date:'',brand:'',type:'weekly'},matches:[{participants:[],winner:'',loser:''}],stories:[]};edit=true;showDraft()">✍️ Manual</button>`}<button class="btn" onclick="mode==='roster'?analyzeRoster():analyze()">Analisar</button></div><div id="msg" class="mut" style="margin-top:12px">${msg||''}</div>`}
+function addFiles(f){files=files.concat(Array.from(f));const ids=['desc','ty','txt','rb'];const v=ids.map(i=>$('#'+i)?.value||'');openSheet(upSheet());ids.forEach((i,k)=>{const e=$('#'+i);if(e)e.value=v[k]})}
+async function analyze(){
+const txt=$('#txt').value.trim();if(!files.length&&!txt){$('#msg').textContent='Selecione imagens ou cole o texto.';return}
+if(!sample){$('#msg').textContent='A leitura por IA só funciona dentro do Claude.';return}
+const desc=$('#desc').value,ty=$('#ty').value;
+$('#msg').innerHTML='<span class="spin">🔍 Analisando screenshots...</span>';
+const known=Object.keys(S.roster).join(', ');const ch=TITLES.map(t=>t[0]+': '+((S.titles[t[0]]||{}).champ||'vago')).join('; ');
+const p=`Você lê screenshots do jogo Journey of Wrestling da empresa fictícia Purple League Wrestling (PLW; brands PLWAR, PLW MOTION, PLW SHOW OFF). TODAS as imagens são páginas do MESMO evento: junte-as, não trate cada uma como evento separado. Extraia apenas o que está visível; use null quando não aparecer. NUNCA invente resultados.
+Descrição do usuário: ${desc||'(nenhuma)'}. Tipo informado: ${ty||'(detectar)'}.${txt?'\nTEXTO DOS RESULTADOS COLADO PELO USUÁRIO (fonte principal, use junto com as imagens se houver):\n'+txt+'\n':''}
+Campeões atuais: ${ch}. Nomes já conhecidos (mantenha a grafia): ${known||'nenhum'}.
+Responda SOMENTE com JSON neste formato: {"event":{"name":"","date":"","brand":"PLWAR|PLW MOTION|PLW SHOW OFF|GLOBAL","type":"weekly|ppv","attendance":0,"coins":0,"hype":0,"rating":0,"notes":""},"matches":[{"participants":[""],"winner":"","loser":"","stipulation":"","championship":"","title_change":false,"new_champion":"","rating":0,"eliminations":"","notes":""}],"stories":[{"type":"rivalry|alliance|betrayal|faction|tag|turn|injury|suspension|contract|appearance|other","names":[""],"text":""}]}
+Em "championship" use o nome exato: ${TITLES.map(t=>t[0]).join(' | ')}. "rating" das lutas em estrelas (ex.: 4.5).`;
+try{const r=await sample.json(p,files.length?{images:files,modelTier:'complex',cache:false}:{modelTier:'complex',cache:false});draft=r;draft.event=draft.event||{};draft.matches=draft.matches||[];draft.stories=draft.stories||[];if(ty)draft.event.type=ty;edit=false;showDraft()}
+catch(e){$('#msg').textContent='Erro na análise: '+(e.message||e.code)}}
+function dp(el){const k=el.dataset.k.split('.');let o=draft;for(let i=0;i<k.length-1;i++)o=o[k[i]];const l=k[k.length-1];o[l]=el.type==='checkbox'?el.checked:(el.dataset.arr?el.value.split(',').map(s=>s.trim()).filter(Boolean):el.value)}
+function fld(k,v,lab,arr){return`<label class="mut">${lab}</label><input data-k="${k}" ${arr?'data-arr=1':''} value="${esc(arr?(v||[]).join(', '):v)}" oninput="dp(this)">`}
+function showDraft(){const d=draft,e=d.event;let h=`<h2 style="font-size:30px">🧠 O QUE ACONTECEU?</h2>`;
+if(edit){h+=`<div class="card">${fld('event.name',e.name,'Nome')}${fld('event.date',e.date,'Data')}${fld('event.brand',e.brand,'Brand')}${fld('event.type',e.type,'Tipo (weekly/ppv)')}${fld('event.attendance',e.attendance,'Público')}${fld('event.hype',e.hype,'Hype')}${fld('event.coins',e.coins,'Coins')}${fld('event.rating',e.rating,'Rating')}</div><div class="sec">MATCHES</div>`;
+d.matches.forEach((m,i)=>{const b='matches.'+i+'.';h+=`<div class="card">${fld(b+'participants',m.participants,'Participantes (vírgula)',1)}${fld(b+'winner',m.winner,'Vencedor (ou Empate)')}${fld(b+'loser',m.loser,'Perdedor')}${fld(b+'stipulation',m.stipulation,'Stipulation')}${fld(b+'championship',m.championship,'Título')}${fld(b+'new_champion',m.new_champion,'Novo campeão')}${fld(b+'rating',m.rating,'Rating')}${fld(b+'notes',m.notes,'Notas')}<label><input type="checkbox" style="width:auto" data-k="${b}title_change" ${m.title_change?'checked':''} onchange="dp(this)"> Mudou de campeão</label><button class="btn r" style="margin-top:6px" onclick="draft.matches.splice(${i},1);showDraft()">Remover</button></div>`});
+h+=`<button class="btn s" onclick="draft.matches.push({participants:[],winner:'',loser:''});showDraft()">+ Match</button><div class="sec">STORYLINES</div>`;
+d.stories.forEach((s,i)=>{const b='stories.'+i+'.';h+=`<div class="card">${fld(b+'type',s.type,'Tipo')}${fld(b+'names',s.names,'Nomes (vírgula)',1)}${fld(b+'text',s.text,'Texto')}<button class="btn r" style="margin-top:6px" onclick="draft.stories.splice(${i},1);showDraft()">Remover</button></div>`});
+h+=`<button class="btn s" onclick="draft.stories.push({type:'rivalry',names:[],text:''});showDraft()">+ Storyline</button>`}
+else{h+=`<div class="card" style="--c:${bc(e.brand)}"><h3>${esc(e.name||'Evento sem nome')}</h3><div class="mut">${esc(e.date||'')} • ${esc(e.brand||'')} • ${esc(e.type||'')}</div></div><div class="sec">MATCHES</div>${d.matches.map(mline).join('')||'<div class="mut">Nenhuma luta detectada.</div>'}<div class="sec">STORYLINES</div>${d.stories.map(s=>`<div class="card"><span class="tag">${esc(s.type)}</span>${esc((s.names||[]).join(', '))}: ${esc(s.text)}</div>`).join('')||'<div class="mut">Nenhuma.</div>'}<div class="sec">ALTERAÇÕES</div><div class="card">${d.matches.filter(m=>m.title_change).map(m=>`🏆 ${esc(m.new_champion||m.winner)} → ${esc(m.championship)}`).join('<br>')||'Nenhum título mudou de mãos.'}</div><div class="sec">DADOS DO SHOW</div><div class="card">Público: ${esc(e.attendance??'—')}<br>Hype: ${esc(e.hype??'—')}<br>Coins: ${esc(e.coins??'—')}<br>Rating: ${esc(e.rating??'—')}</div>`}
+h+=`<div class="row" style="margin-top:14px"><button class="btn g" onclick="commit()">✅ SALVAR NO HISTÓRICO</button><button class="btn o" onclick="edit=!edit;showDraft()">${edit?'👁️ REVISAR':'✏️ CORRIGIR'}</button><button class="btn r" onclick="closeSheet()">❌ DESCARTAR</button></div>`;
+const y=$('#sheet').scrollTop;openSheet(h);$('#sheet').scrollTop=y}
+function commit(){const e=draft.event;const ev={id:Date.now(),name:e.name||'Evento',date:e.date||'',brand:e.brand||'',type:e.type||'weekly',attendance:e.attendance,coins:e.coins,hype:e.hype,rating:e.rating,notes:e.notes||'',matches:draft.matches.map(m=>({...m})),stories:draft.stories.map(s=>({...s}))};
+let tc=0;
+ev.matches.forEach(m=>{const draw=/empate|draw/i.test(m.winner||'');(m.participants||[]).forEach(n=>{const w=S.roster[n]||(S.roster[n]={brand:ev.brand,w:0,l:0});if(!draw){if(m.winner&&(n===m.winner||(m.winner||'').includes(n)))w.w++;else if(m.winner)w.l++}});
+if(m.championship&&!draw){const c=S.titles[m.championship]||(S.titles[m.championship]={champ:'',hist:[]});const nc=m.new_champion||m.winner;if(m.title_change||!c.champ){if(m.title_change)tc++;c.champ=nc;c.hist.push({name:nc,event:ev.name,date:ev.date})}}});
+ev.stories.forEach(s=>{s.event=ev.name;s.date=ev.date;S.stories.push(s)});
+S.events.push(ev);persist();const nm=ev.matches.length,ns=ev.stories.length;closeSheet();render();toast(`🟣 PLW HISTORY UPDATED\n${nm} matches adicionados • ${tc} mudança(s) de título • ${ns} storyline(s) atualizada(s)`,4500)}
+async function analyzeRoster(){
+const txt=$('#txt').value.trim();
+if(!files.length&&!txt){$('#msg').textContent='Selecione imagens ou cole o texto.';return}
+if(!sample){$('#msg').textContent='A leitura por IA só funciona dentro do Claude.';return}
+const rb=$('#rb').value;
+$('#msg').innerHTML='<span class="spin">🔍 Lendo roster...</span>';
+const p=`Você lê telas e listas de roster do jogo Journey of Wrestling da empresa fictícia PLW (brands PLWAR, PLW MOTION, PLW SHOW OFF). Extraia TODOS os lutadores visíveis ou citados, sem repetir. Use null quando a informação não aparecer. NUNCA invente. ${rb?'Brand informada pelo usuário: '+rb+'.':''}${txt?'\nTEXTO COLADO:\n'+txt:''}
+Responda SOMENTE com JSON: {"wrestlers":[{"name":"","brand":"PLWAR|PLW MOTION|PLW SHOW OFF","alignment":"face|heel|neutral|null","status":"ativo|lesionado|suspenso|null"}]}`;
+try{const r=await sample.json(p,files.length?{images:files,modelTier:'complex',cache:false}:{modelTier:'complex',cache:false});draft={wrestlers:(r.wrestlers||[]).map(w=>({...w,brand:w.brand||rb}))};showRoster()}
+catch(e){$('#msg').textContent='Erro na análise: '+(e.message||e.code)}}
+function showRoster(){let h=`<h2 style="font-size:30px">👥 ROSTER ENCONTRADO (${draft.wrestlers.length})</h2><div class="mut">Corrija o que precisar antes de salvar.</div>${draft.evs?'<div class="card">📺 '+draft.evs.length+' evento(s) • '+draft.evs.reduce((a,e)=>a+e.matches.length,0)+' lutas • '+draft.feuds.length+' feud(s) • '+(draft.tags||[]).length+' tag team(s) • '+(draft.factions||[]).length+' faction(s) vão para o histórico<div class="mut">Reimportar substitui só o que veio da save; o que você lançou por print fica.</div></div>':''}${draft.champs?'<div class="card">'+Object.entries(draft.champs).map(([t,n])=>'🏆 '+esc(t)+': <b>'+esc(n)+'</b>').join('<br>')+'</div>':''}`;
+draft.wrestlers.forEach((w,i)=>{const b='wrestlers.'+i+'.';h+=`<div class="card" style="--c:${bc(w.brand)}">${fld(b+'name',w.name,'Nome')}<div class="row"><div>${fld(b+'brand',w.brand,'Brand')}</div><div>${fld(b+'alignment',w.alignment,'Face/Heel')}</div></div><button class="btn r" onclick="draft.wrestlers.splice(${i},1);showRoster()">Remover</button></div>`});
+h+=`<button class="btn s" onclick="draft.wrestlers.push({name:'',brand:'',alignment:''});showRoster()">+ Lutador</button><div class="row" style="margin-top:14px"><button class="btn g" onclick="commitRoster()">✅ SALVAR ROSTER</button><button class="btn r" onclick="closeSheet()">❌ DESCARTAR</button></div>`;
+const y=$('#sheet').scrollTop;openSheet(h);$('#sheet').scrollTop=y}
+function commitRoster(){let n=0;draft.wrestlers.forEach(w=>{const nm=(w.name||'').trim();if(!nm)return;const o=S.roster[nm]||{w:0,l:0};S.roster[nm]={...o,brand:w.brand||o.brand||'',alignment:w.alignment&&w.alignment!=='null'?w.alignment:o.alignment||'',status:w.status&&w.status!=='null'?w.status:o.status||'',w:w.w??o.w??0,l:w.l??o.l??0,pop:w.pop??o.pop,mor:w.mor??o.mor,inj:w.inj||''};n++});if(draft.champs)applyChamps(draft.champs);const fromSave=s=>s.src==='save'||s.event==='save do jogo';if(draft.evs)S.events=S.events.filter(e=>e.src!=='save').concat(draft.evs);if(draft.evs||draft.factions)S.stories=S.stories.filter(s=>!fromSave(s));if(draft.factions)draft.factions.forEach(f=>S.stories.push({type:'faction',team:f.n,names:f.m,text:f.n+' — líder: '+f.l,event:'save do jogo',date:'',since:f.since,src:'save'}));if(draft.tags)draft.tags.forEach(t=>S.stories.push({type:'tag',team:t.team,names:t.names,text:t.team+' — '+t.w+'V-'+t.l+'D'+(t.fac?' • tag da faction':''),event:'save do jogo',date:'',since:t.since,src:'save'}));if(draft.feuds)S.stories=S.stories.concat(draft.feuds);if(draft.month)S.month=draft.month;persist();closeSheet();render();toast('🟣 ROSTER ATUALIZADO\n'+n+' lutadores salvos')}
+$('#fab').onclick=()=>{mode='show';files=[];openSheet(upSheet())};
+
+let K=Object.assign({gemini:'',openai:'',mg:'gemini-3-flash-preview',mo:'gpt-4o-mini',ollama:'http://127.0.0.1:58307',mq:'qwen3:4b',engine:'ollama'},(()=>{try{return JSON.parse(localStorage.getItem('plw-keys')||'{}')}catch(e){return{}}})());
+function saveK(){try{localStorage.setItem('plw-keys',JSON.stringify(K))}catch(e){}}
+const b64=f=>new Promise((ok,no)=>{const x=new FileReader();x.onload=()=>ok(x.result.split(',')[1]);x.onerror=no;x.readAsDataURL(f)});
+async function callAI(eng,p,imgs,json){
+if(!K[eng]){const alt=eng==='gemini'?'openai':'gemini';if(K[alt])eng=alt;else throw{message:'Configure uma API Key na aba Sistema.'}}
+const ims=[];for(const f of imgs||[])ims.push({t:f.type||'image/jpeg',d:await b64(f)});
+if(eng==='gemini'){
+const body={contents:[{parts:[{text:p},...ims.map(i=>({inline_data:{mime_type:i.t,data:i.d}}))]}]};
+if(json)body.generationConfig={responseMimeType:'application/json'};
+const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+K.mg+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':K.gemini},body:JSON.stringify(body)});
+const d=await r.json();if(d.error)throw{message:d.error.message};
+return(d.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('')}
+const body={model:K.mo,messages:[{role:'user',content:[{type:'text',text:p},...ims.map(i=>({type:'image_url',image_url:{url:'data:'+i.t+';base64,'+i.d}}))]}]};
+if(json)body.response_format={type:'json_object'};
+const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+K.openai},body:JSON.stringify(body)});
+const d=await r.json();if(d.error)throw{message:d.error.message};
+return d.choices[0].message.content}
+sample=async(p,o={})=>{const t=await callAI(o.engine||K.engine,p,o.images,false);if(o.onText)o.onText({text:t});return{text:t}};
+sample.json=async(p,o={})=>{const t=await callAI(o.engine||K.engine,p,o.images,true);return JSON.parse(t.replace(/```json|```/g,'').trim())};
+function vPlan(){return`<div class="sec">📝 PLANOS</div><div class="mut">Rascunhos e ideias. São sugestões, nunca entram no histórico como fato.</div><input id="pt" placeholder="Título (ex.: Card do Purple Collision)"><textarea id="px" placeholder="Anotações..."></textarea><button class="btn" onclick="addPlan()">+ Adicionar plano</button><div style="height:12px"></div>${S.plans.map((p,i)=>`<div class="card"><input value="${esc(p.t)}" onchange="S.plans[${i}].t=this.value;persist()"><textarea onchange="S.plans[${i}].x=this.value;persist()">${esc(p.x)}</textarea><button class="btn r" onclick="S.plans.splice(${i},1);persist();render()">Apagar</button></div>`).join('')}`}
+function addPlan(){const t=$('#pt').value.trim(),x=$('#px').value.trim();if(!t&&!x)return;S.plans.unshift({t,x});persist();render()}
+function vSys(){const o=(v,l)=>`<option value="${v}" ${K.engine===v?'selected':''}>${l}</option>`;return`<div class="sec">⚙️ SISTEMA</div><div class="card"><h3>💾 Save do jogo</h3><div class="mut">Envie o arquivo da save do jeito que baixou (.txt, .gz ou .json). Lê roster, campeões, lutas, feuds e facções direto no aparelho, sem IA.</div><label class="btn" style="position:relative;display:block;text-align:center;overflow:hidden;margin-top:8px">Escolher arquivo da save<input type="file" onchange="readSave(this.files[0])" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:200px"></label></div><div class="card"><h3>Chaves de API</h3><div class="mut" style="margin-bottom:6px">A IA agora só serve para os chats (ideias de book e jornalistas) e, se quiser, para ler prints.</div><div class="mut">Ficam só neste aparelho. Gemini tem plano gratuito; ChatGPT é pago.</div><label class="mut">Gemini API Key</label><input type="password" value="${esc(K.gemini)}" onchange="K.gemini=this.value.trim();saveK()"><label class="mut">Modelo Gemini</label><input value="${esc(K.mg)}" onchange="K.mg=this.value.trim();saveK()"><label class="mut">ChatGPT API Key</label><input type="password" value="${esc(K.openai)}" onchange="K.openai=this.value.trim();saveK()"><label class="mut">Modelo ChatGPT</label><input value="${esc(K.mo)}" onchange="K.mo=this.value.trim();saveK()"><label class="mut">Motor para ler prints e roster</label><select onchange="K.engine=this.value;saveK()">${o('ollama','Ollama (local)')}${o('gemini','Gemini')}${o('openai','ChatGPT')}</select></div><div class="card"><h3>🦙 Ollama (IA local)</h3><div class="mut">Rode <b>ollama pull qwen3:4b</b> e inicie o Ollama com <b>OLLAMA_ORIGINS=*</b>. Chats e ideias usam ele; prints continuam pedindo Gemini/ChatGPT (Qwen3 4B não lê imagem).</div><label class="mut">URL do Ollama</label><input value="${esc(K.ollama)}" onchange="K.ollama=this.value.trim();saveK()"><label class="mut">Modelo</label><input value="${esc(K.mq)}" onchange="K.mq=this.value.trim();saveK()"><button class="btn s" style="margin-top:6px" onclick="testOl()">🩺 Testar Ollama</button><div id="olr" class="mut"></div></div><div class="card"><h3>Backup</h3><div class="row"><button class="btn" onclick="exportBk()">⬇️ Exportar</button><label class="btn s" style="position:relative;overflow:hidden;text-align:center">⬆️ Importar save (.txt) ou backup<input type="file" onchange="readSave(this.files[0])" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:200px"></label></div></div>`}
+function exportBk(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='plw-save-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()}
+function importBk(f){if(!f)return;const x=new FileReader();x.onload=()=>{try{S=norm(JSON.parse(x.result));persist();render();toast('✅ Backup restaurado')}catch(e){toast('Arquivo inválido')}};x.readAsText(f)}
+
+let rf={q:'',b:'',a:''};
+function bk(b){b=String(b||'').toUpperCase();return b.includes('MOTION')?'MOTION':b.includes('SHOW')?'SHOW OFF':b.includes('WAR')?'PLWAR':''}
+function nextPPV(){const last=[...S.events].reverse().find(e=>e.type==='ppv');const i=last?S.cal.findIndex(n=>n&&n.toLowerCase()===String(last.name).toLowerCase()):-1;for(let k=1;k<=12;k++){const j=(i+k+12)%12;if(S.cal[j])return S.cal[j]+' • '+MES[j]}return'—'}
+function setChamp(i,v){if(!v)return;const n=TITLES[i][0];if(v==='__outro'){v=prompt('Nome do campeão:')||'';if(!v.trim())return render()}const c=S.titles[n]||(S.titles[n]={champ:'',hist:[]});if(v==='__vago')v='';c.champ=v.trim();if(v)c.hist.push({name:v.trim(),event:'ajuste manual',date:''});persist();render()}
+function rfr(){const p=$('#rq').selectionStart;render();const e=$('#rq');e.focus();e.setSelectionRange(p,p)}
+function editW(n){const w=S.roster[n];const so=(v,l)=>`<option value="${v}" ${(w.alignment||'').toLowerCase()===v?'selected':''}>${l}</option>`;
+openSheet(`<h2 style="font-size:30px">✏️ ${esc(n)}</h2><label class="mut">Nome</label><input id="en" value="${esc(n)}"><label class="mut">Brand</label><select id="eb">${['PLWAR','PLW MOTION','PLW SHOW OFF'].map(b=>`<option ${bk(w.brand)===bk(b)?'selected':''}>${b}</option>`).join('')}</select><label class="mut">Alinhamento</label><select id="ea"><option value="">—</option>${so('face','Face')}${so('heel','Heel')}</select><label class="mut">Status</label><select id="es">${['ativo','lesionado','suspenso'].map(x=>`<option ${w.status===x?'selected':''}>${x}</option>`).join('')}</select><div class="row" style="margin-top:14px"><button class="btn g" data-n="${esc(n)}" onclick="saveW(this.dataset.n)">Salvar</button><button class="btn s" onclick="closeSheet()">Cancelar</button><button class="btn r" data-n="${esc(n)}" onclick="delW(this.dataset.n)">Excluir</button></div>`)}
+function saveW(o){const nn=$('#en').value.trim()||o;const w=S.roster[o];const u={...w,brand:$('#eb').value,alignment:$('#ea').value,status:$('#es').value};if(nn!==o)delete S.roster[o];S.roster[nn]=u;persist();closeSheet();render()}
+function delW(o){if(!confirm('Excluir '+o+' do roster?'))return;delete S.roster[o];persist();closeSheet();render()}
+function vRoster(){const all=Object.entries(S.roster);const r=all.filter(([n,w])=>(!rf.q||n.toLowerCase().includes(rf.q.toLowerCase()))&&(!rf.b||bk(w.brand)===rf.b)&&(!rf.a||(w.alignment||'').toLowerCase()===rf.a)).sort((a,b)=>b[1].w-a[1].w);
+const so=(v,l,c)=>`<option value="${v}" ${c===v?'selected':''}>${l}</option>`;
+return`<div class="sec">ROSTER (${r.length}/${all.length})</div><div class="row"><button class="btn o" onclick="mode='roster';files=[];openSheet(upSheet())">📥 Importar roster</button><button class="btn" onclick="openSaveUp()">💾 Upar save do jogo</button></div><input id="rq" style="margin-top:8px" placeholder="🔍 Buscar lutador..." value="${esc(rf.q)}" oninput="rf.q=this.value;rfr()"><div class="row"><select onchange="rf.b=this.value;render()">${so('','Todas as brands',rf.b)}${so('PLWAR','PLWAR',rf.b)}${so('MOTION','PLW MOTION',rf.b)}${so('SHOW OFF','PLW SHOW OFF',rf.b)}</select><select onchange="rf.a=this.value;render()">${so('','Face e Heel',rf.a)}${so('face','Face',rf.a)}${so('heel','Heel',rf.a)}</select></div><div class="grid" style="margin-top:8px">${r.map(([n,w])=>`<div class="card" style="--c:${bc(w.brand)}"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3 class="lk" data-n="${esc(n)}" onclick="openP(this.dataset.n)">${esc(n)}</h3><button class="btn s" style="flex:0 0 auto;padding:4px 9px" data-n="${esc(n)}" onclick="editW(this.dataset.n)">✏️</button></div><div class="mut">${esc(w.brand||'')} ${esc(w.alignment||'')} ${esc(w.status||'')}</div><div><b>${w.w}</b>V • <b>${w.l}</b>D</div></div>`).join('')}</div>${all.length?'':'<div class="mut">Importe o roster, envie o save do jogo ou salve shows para preenchê-lo.</div>'}`}
+function openSaveUp(){openSheet(`<h2 style="font-size:30px">💾 UPAR SAVE DO JOGO</h2><div class="mut">No JoW: Options → Download Save. Envie o arquivo aqui. Leitura direta no aparelho, sem IA: roster, brand, face/heel, lesões, campeões (inclusive mundiais e tag) e facções.</div><div class="drop"><label class="btn" style="position:relative;display:block;text-align:center;overflow:hidden">Escolher arquivo da save<input type="file" onchange="readSave(this.files[0])" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:200px"></label></div><div id="msg" class="mut"></div><button class="btn s" onclick="closeSheet()">Cancelar</button>`)}
+function slim(o){const out=[];(function w(x,d){if(d>9||!x||typeof x!=='object')return;if(Array.isArray(x)){if(x.length>3&&x.every(i=>i&&typeof i==='object'&&!Array.isArray(i))&&x.some(i=>typeof i.name==='string'))out.push(x);x.forEach(i=>w(i,d+1))}else Object.values(x).forEach(i=>w(i,d+1))})(o,0);return out.sort((a,b)=>b.length-a.length).slice(0,3).map(a=>a.map(i=>Object.fromEntries(Object.entries(i).filter(([k,v])=>['string','number','boolean'].includes(typeof v)&&String(v).length<40))))}
+function say(t){const m=$('#msg');if(m)m.textContent=t;else toast(t)}
+async function readSave(f){if(!f)return;const m=$('#msg');if(m)m.innerHTML='<span class="spin">Lendo arquivo...</span>';
+try{let buf=await f.arrayBuffer();const u=new Uint8Array(buf);
+if(u[0]===0x1f&&u[1]===0x8b){if(!window.DecompressionStream)throw new Error('este navegador não descompacta gzip; use um Chrome ou Safari atualizado');buf=await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()}
+const o=JSON.parse(new TextDecoder().decode(buf));
+if(o.collections)applySave(o);else if(o.events||o.titles||o.roster||o.stories||o.plans){S=norm(o);persist();closeSheet();render();toast('✅ Backup restaurado')}else throw new Error('o arquivo não é save do jogo nem backup do PLW')}
+catch(e){say('Não consegui ler: '+(e.message||e))}}
+const CM={'PLW World Championship':'PLW World Championship','PLW World Tag Team Championship':'PLW World Tag Team Championship','PLW SHOW OFF':'PLW Show Off Championship','PLWAR Crown':'PLWAR Crown Championship','PLWAR Ace':'PLWAR Ace Championship','PLW Motion Next Level':'PLW Motion Next Level Championship','PLW Motion Rising':'PLW Motion Rising Championship'};
+function t2(s){s=String(s||'').toLowerCase();if(!s||s==='null')return'';if(s.includes('tag'))return TITLES[1][0];if(s.includes('shot'))return'';if(s.includes('world'))return TITLES[0][0];if(s.includes('crown'))return TITLES[2][0];if(s.includes('ace'))return TITLES[3][0];if(s.includes('next level'))return TITLES[4][0];if(s.includes('rising'))return TITLES[5][0];if(s.includes('show off'))return TITLES[6][0];return''}
+const spn=s=>String(s||'').split(/,\s*|\s+and\s+|\s*&\s*/).map(x=>x.trim()).filter(Boolean);
+function applySave(d){const C={};d.collections.forEach(c=>C[c.name]=c.data);const SS={};C.Superstars.forEach(s=>SS[s.$loki]=s);
+const ch={};C.Championships.forEach(c=>{const t=CM[c.name],s=SS[c.superstarId];if(t&&s&&!c.vacated)(ch[t]=ch[t]||[]).push(s.name)});Object.keys(ch).forEach(t=>ch[t]=ch[t].join(' & '));
+const ws=C.Superstars.filter(s=>s.rosterId===1&&!s.retired&&!s.dead).map(s=>({name:s.name,brand:s.brandName||'',alignment:s.alignment||'neutral',status:s.injured>0?'lesionado':s.suspensionMonths>0?'suspenso':'ativo',pop:s.popularity,mor:s.morale,w:s.wins||0,l:s.losses||0,inj:s.injured>0?(s.injuryName||'lesão')+' • '+s.injured+' mês(es)':''}));
+const fa=(C.Factions||[]).filter(f=>!f.disbanded).map(f=>({n:f.name,l:(SS[f.leaderSuperstarId]||{}).name||'?',m:(f.tempSuperstarsIds||[]).map(i=>(SS[i]||{}).name).filter(Boolean),since:fdt(f.meta&&f.meta.created)}));
+const EV={},GM={};C.Events.forEach(e=>EV[e.$loki]=e);(C.GimmickMatches||[]).forEach(g=>GM[g.$loki]=g);
+const byE={};C.Matches.forEach(m=>(byE[m.eventId]=byE[m.eventId]||[]).push(m));const seen={};
+const evs=Object.keys(byE).map(Number).sort((a,b)=>a-b).map(id=>{const e=EV[id]||{};const wk=!!e.weeklyShow;const br=wk?(e.brandName||''):'GLOBAL';seen[br]=(seen[br]||0)+1;
+const ms=byE[id].sort((a,b)=>a.order-b.order).map(m=>{const cw=t2(m.championshipsWon),cd=t2(m.championshipsDefended)||t2(m.championshipsRetained);const g=GM[m.gimmickMatchId];
+return{participants:[...spn(m.winner),...spn(m.loser)],winner:m.winner||'',loser:m.loser||'',stipulation:g?g.name:'',championship:cw||cd,title_change:!!cw,new_champion:cw?m.winner:'',rating:m.rating,notes:''}});
+return{id:'sv'+id,src:'save',name:wk?br+' • semana '+seen[br]:(e.name||'PPV'),date:((e.month!=null?MES[e.month%12]:'')+' '+(e.year||'')).trim(),brand:br,type:wk?'weekly':'ppv',coins:e.pointsEarned,hype:e.hype,rating:e.rating,notes:'',matches:ms,stories:[]}});
+const feuds=(C.Feuds||[]).filter(f=>f.started).map(f=>({type:'rivalry',names:f.participants||[],text:f.name+' — hype '+f.hype+(f.ended?' (encerrada)':'')+(f.rating?' • '+f.rating+'★':''),event:'save do jogo',date:'',since:fdt(f.meta&&f.meta.created),src:'save'}));
+const ms=C.Events.filter(e=>byE[e.$loki]&&e.month!=null).map(e=>e.month);
+const TH={};(C.TagTeamsHash||[]).forEach(h=>(TH[h.tagTeamId]=TH[h.tagTeamId]||[]).push(h.superstarId));const tg=(C.TagTeams||[]).map(t=>{const ids=(t.tempSuperstarsIds&&t.tempSuperstarsIds.length?t.tempSuperstarsIds:TH[t.$loki]||[]);const nn=ids.map(i=>(SS[i]||{}).name).filter(Boolean);return{team:t.name,names:nn,ok:t.rosterId===1||(ids.length>1&&ids.every(i=>(SS[i]||{}).rosterId===1)),w:t.wins||0,l:t.losses||0,fac:!!t.factionTagTeam,since:fdt(t.meta&&t.meta.created)}}).filter(t=>t.ok&&t.names.length>=2);
+draft={wrestlers:ws,champs:ch,factions:fa,tags:tg,evs,feuds,month:ms.length?MES[Math.max(...ms)%12]:''};showRoster()}
+function applyChamps(ch){Object.entries(ch).forEach(([t,n])=>{const c=S.titles[t]||(S.titles[t]={champ:'',hist:[]});if(c.champ!==n){c.champ=n;c.hist.push({name:n,event:'save do jogo',date:''})}})}
+function chB(n){return[...new Set(String(n||'').split(' & ').map(x=>bk((S.roster[x]||{}).brand)).filter(Boolean))].join(' / ')}
+let wn='',wt='cur';
+function curM(){return S.month||MES[new Date().getMonth()]}
+function openW(n){wn=n;wt='cur';showW()}
+function showW(){const n=wn,w=S.roster[n]||{},N=S.notes[n]||(S.notes[n]={cur:'',plan:'',log:[]});
+const T=[['cur','📅 Mês atual'],['plan','🔮 Planos futuros'],['log','🗂️ Histórico']];let body;
+if(wt==='log')body=N.log.length?N.log.slice().reverse().map(l=>`<div class="card"><b>${esc(l.m)}</b><div class="bub a">${esc(l.t)}</div></div>`).join(''):'<div class="mut">Nenhum mês arquivado ainda.</div>';
+else body=`<label class="mut">${wt==='cur'?'Anotação de '+esc(curM()):'Onde quero levar esse lutador (sugestão, não é fato)'}</label><textarea id="wnote" style="min-height:240px" oninput="S.notes[wn].${wt}=this.value;persist()">${esc(N[wt])}</textarea>${wt==='cur'?'<button class="btn o" onclick="closeMonth()">📦 Fechar mês e arquivar</button>':''}`;
+openSheet(`<h2 style="font-size:30px">${esc(n)}</h2><div class="mut">${esc(w.brand||'')} ${esc(w.alignment||'')} ${esc(w.status||'')} • ${w.w||0}V-${w.l||0}D${w.pop?' • pop '+w.pop:''}${w.mor?' • moral '+w.mor:''}${w.inj?' • 🤕 '+esc(w.inj):''}</div><nav style="position:sticky;top:0;z-index:3;background:var(--bg);padding:8px 0">${T.map(t=>`<button class="${t[0]===wt?'on':''}" onclick="wt='${t[0]}';showW()">${t[1]}</button>`).join('')}</nav>${body}<div class="row" style="margin-top:14px"><button class="btn s" onclick="closeSheet();render()">Fechar</button></div>`)}
+function closeMonth(){const N=S.notes[wn];if(!N.cur.trim())return toast('Nada escrito neste mês.');const m=prompt('Nome do mês que está sendo arquivado:',curM());if(m===null)return;N.log.push({m:m||curM(),t:N.cur});N.cur='';const nx=prompt('Qual é o mês agora no jogo?',curM());if(nx)S.month=nx.trim();persist();showW()}
+function vBrands(){const B=[['PLWAR','PLWAR'],['MOTION','PLW MOTION'],['SHOW OFF','PLW SHOW OFF']];const h4='<div class="sec" style="font-size:18px;margin:10px 0 4px">';
+return`<div class="sec">🎨 BRANDS</div>`+B.map(([k,n])=>{const ws=Object.entries(S.roster).filter(([,w])=>bk(w.brand)===k);const ts=TITLES.filter(t=>t[1]===k);const ev=S.events.filter(e=>bk(e.brand)===k).slice(-3).reverse();
+return`<div class="card" style="--c:${bc(k)};border-left-width:8px"><h3 style="color:${bc(k)};font-size:32px">${n}</h3><div class="mut">${ws.length} lutadores • ${ts.length} título(s)</div>${h4}TÍTULOS</div>${ts.map(t=>`<div>🏆 ${esc(t[0])}: <b>${esc((S.titles[t[0]]||{}).champ||'VAGO')}</b></div>`).join('')}${h4}ROSTER</div><div>${ws.map(([x,w])=>`<span class="tag" data-n="${esc(x)}" onclick="openW(this.dataset.n)" style="--c:${bc(k)};cursor:pointer;margin:2px 0">${S.notes[x]&&(S.notes[x].cur||S.notes[x].plan)?'📝 ':''}${esc(x)}${w.status==='lesionado'?' 🤕':''}${w.alignment?' • '+esc(w.alignment):''}</span>`).join(' ')||'<span class="mut">Sem lutadores. Importe o roster escolhendo esta brand.</span>'}</div><div class="mut" style="margin-top:6px">Legenda dos emojis: ⚠️ lesionado/suspenso • 🏆 campeão atual • 🔥 sequência positiva/sem derrota • 📈 3+ vitórias seguidas • 📉 sequência recente de derrotas. Passe o cursor ou toque no emoji para ver o significado; toque no nome para abrir o perfil.</div>${h4}ÚLTIMOS EVENTOS</div>${ev.map(e=>`<div>${esc(e.name)} <span class="mut">${esc(e.date||'')}</span></div>`).join('')||'<div class="mut">Nenhum.</div>'}</div>`}).join('')+`<div class="card" style="--c:#d4a017;border-left-width:8px"><h3 style="color:#d4a017;font-size:32px">GLOBAL</h3>${TITLES.filter(t=>t[1]==='GLOBAL').map(t=>`<div>🏆 ${esc(t[0])}: <b>${esc((S.titles[t[0]]||{}).champ||'VAGO')}</b></div>`).join('')}</div>`}
+
+/* ===== PLW BOOKER v2: navegação conectada, stats, Ollama ===== */
+let SH=[],IDEA='';
+const nm=n=>`<span class="lk" data-n="${esc(n)}" onclick="event.stopPropagation();openP(this.dataset.n)">${esc(n)}</span>`;
+const nms=s=>spn(s).map(nm).join(' & ')||esc(s||'');
+const hasC=(c,n)=>String(c||'').split(' & ').includes(n);
+function pv(h){SH.push(h);drawSH()}
+function drawSH(){const s=$('#sheet');openSheet(`<div class="row" style="margin-bottom:8px"><button class="btn s" onclick="back()">${SH.length>1?'← Voltar':'✕ Fechar'}</button></div>`+SH[SH.length-1]);s.scrollTop=0}
+function back(){SH.pop();SH.length?drawSH():closeSheet()}
+const _cs=closeSheet;closeSheet=function(){SH=[];_cs()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden){e.preventDefault();SH.length>1?back():closeSheet()}});
+function ML(){const a=[];S.events.forEach((e,ei)=>(e.matches||[]).forEach(m=>a.push({...m,ev:e.name,brand:e.brand,date:e.date,ei})));return a}
+function sd(m,n){const P=m.participants||[];if(!P.includes(n)&&!spn(m.winner).includes(n)&&!spn(m.loser).includes(n))return'';if(/empate|draw/i.test(m.winner||''))return'd';if(spn(m.winner).includes(n))return'w';return m.winner?'l':''}
+function opp(m,n){const s=sd(m,n);if(s==='w')return spn(m.loser);if(s==='l')return spn(m.winner);return(m.participants||[]).filter(x=>x!==n)}
+function pst(n){const mm=ML().filter(m=>sd(m,n));let w=0,l=0,d=0;const H={};mm.forEach(m=>{const s=sd(m,n);s==='w'?w++:s==='l'?l++:d++;opp(m,n).forEach(o=>{if(o===n)return;const h=H[o]||(H[o]={w:0,l:0,d:0,n:0});h.n++;h[s]++})});let sw=0,su=0;for(let i=mm.length-1;i>=0&&sd(mm[i],n)==='w';i--)sw++;for(let i=mm.length-1;i>=0&&sd(mm[i],n)!=='l';i--)su++;return{mm,w,l,d,H,sw,su}}
+function evIdx(x){for(let i=S.events.length-1;i>=0;i--)if(S.events[i].name===x.event)return i;return-1}
+function startIdx(t){const c=S.titles[t]||{},h=c.hist||[];const tc=ML().filter(m=>m.championship===t&&m.title_change);if(tc.length)return tc[tc.length-1].ei;return h.length?evIdx(h[h.length-1]):-1}
+function mline(m){const draw=/empate|draw/i.test(m.winner||'');const t=m.championship?` <span class="tag" style="--c:${bc(titleBrand(m.championship))}">🏆 ${esc(m.championship)}${m.title_change?' • MUDOU':''}</span>`:'';const lo=m.loser||(m.participants||[]).filter(p=>p!==m.winner).join(', ');const main=draw?`<b>${(m.participants||[]).map(nm).join(' vs ')}</b> terminou em empate`:`<b>${nms(m.winner)}</b> derrotou ${nms(lo)}`;return`<div class="card" style="--c:${bc(m.brand)}">${main} ${stars(m.rating)}<div class="mut">${esc(m.stipulation||'')}${m.notes?' • '+esc(m.notes):''}</div>${t}</div>`}
+function evCard(e){const i=S.events.indexOf(e);return`<details class="card" style="--c:${bc(e.brand)}"><summary><b>${esc(e.name)}</b> <span class="mut">${esc(e.date||'')} • ${esc(e.brand||'')}</span><div class="mut">Público ${esc(e.attendance??'—')} • Hype ${esc(e.hype??'—')} • Coins ${esc(e.coins??'—')} • ${stars(e.rating)}</div></summary>${(e.matches||[]).map(mline).join('')}${(e.stories||[]).map(s=>`<div class="mut">• ${esc(s.text)}</div>`).join('')}<button class="btn s" style="margin-top:6px" onclick="openE(${i})">📄 Página completa</button></details>`}
+function cd(t){const c=S.titles[t[0]]||{},ch=c.champ,main=TITLES.filter(x=>x[1]===t[1])[0]===t;const tg=`<span class="tag" style="--c:${bc(t[1])}">${main?'⭐ PRINCIPAL':'SECUNDÁRIO'}</span>`;if(!ch)return`<div class="card" style="--c:${bc(t[1])}">${tg}<b>${esc(t[0])}</b><div class="mut">VAGO</div></div>`;
+const si=startIdx(t[0]),names=ch.split(' & ');const ms=ML().filter(m=>m.championship===t[0]&&!m.title_change&&(si<0||m.ei>=si));const last=ms[ms.length-1];
+const rs=ms.map(m=>{const ok=spn(m.winner).some(x=>names.includes(x));return(ok?'✅ ':'❌ ')+(m.participants||[]).filter(x=>!names.includes(x)).join(', ')}).join('<br>');
+const opps=[...new Set(ms.flatMap(m=>(m.participants||[]).filter(x=>!names.includes(x))))];
+return`<div class="card" style="--c:${bc(t[1])}">${tg}<b>${esc(t[0])}</b><h3>${names.map(nm).join(' & ')}</h3><div class="mut">${si>=0?'Ganhou em '+esc(S.events[si].date||S.events[si].name)+' • '+(S.events.length-1-si)+' evento(s) de reinado':'Data do reinado não registrada'}</div><div>🛡️ Defesas: <b>${ms.length}</b>${last?' • última em '+esc(last.ev):''}</div>${opps.length?`<div class="mut">Adversários: ${opps.map(nm).join(', ')}</div><div class="mut">${rs}</div>`:''}</div>`}
+function champCard(t){return cd(t)}
+function vBrands(){const B=[['PLWAR','PLWAR'],['MOTION','PLW MOTION'],['SHOW OFF','PLW SHOW OFF'],['GLOBAL','GLOBAL']];return`<div class="sec">🎨 BRANDS</div>`+B.map(([k,n])=>{const g=k==='GLOBAL',ws=Object.entries(S.roster).filter(([,w])=>bk(w.brand)===k),ts=TITLES.filter(t=>t[1]===k);const evs=S.events.map((e,i)=>({e,i})).filter(({e})=>g?(e.type==='ppv'||!bk(e.brand)):bk(e.brand)===k);
+return`<div class="card" style="--c:${bc(k)};border-left-width:8px"><h3 style="color:${bc(k)};font-size:32px">${n}</h3>${g?'':`<div class="mut">${ws.length} lutadores • ${ts.length} título(s)</div>`}<div class="sec" style="font-size:18px;margin:10px 0 4px">CAMPEÕES</div>${ts.map(cd).join('')}${g?'':`<div class="sec" style="font-size:18px;margin:10px 0 4px">ROSTER</div><div>${ws.map(([x,w])=>`<span class="tag" data-n="${esc(x)}" onclick="openP(this.dataset.n)" style="--c:${bc(k)};cursor:pointer;margin:2px 0">${esc(x)}${w.status==='lesionado'?' 🤕':''}${w.alignment?' • '+esc(w.alignment):''}</span>`).join(' ')||'<span class="mut">Sem lutadores.</span>'}</div>`}<div class="sec" style="font-size:18px;margin:10px 0 4px">ÚLTIMOS EVENTOS</div>${evs.slice(-3).reverse().map(({e,i})=>`<div class="lk" onclick="openE(${i})">${esc(e.name)} <span class="mut">${esc(e.date||'')}</span></div>`).join('')||'<div class="mut">Nenhum.</div>'}${evs.length?`<button class="btn s" style="margin-top:8px" onclick="openBH('${k}')">📚 VER HISTÓRICO (${evs.length})</button>`:''}</div>`}).join('')}
+function openBH(k){const g=k==='GLOBAL';const evs=S.events.map((e,i)=>({e,i})).filter(({e})=>g?(e.type==='ppv'||!bk(e.brand)):bk(e.brand)===k).reverse();pv(`<h2 style="font-size:30px;color:${bc(k)}">📚 HISTÓRICO • ${k}</h2>${evs.map(({e,i})=>`<div class="card" style="--c:${bc(e.brand)};cursor:pointer" onclick="openE(${i})"><b>${esc(e.name)}</b> <span class="mut">${esc(e.date||'')}</span><div class="mut">${(e.matches||[]).length} lutas • ${stars(e.rating)}</div></div>`).join('')||'<div class="mut">Nenhum evento.</div>'}`)}
+function grpOf(type,pred){return Object.entries(groups(type)).filter(([k,l])=>pred(l[0].names||[]))}
+function openE(i){const e=S.events[i];if(!e)return;const P=new Set((e.matches||[]).flatMap(m=>m.participants||[]));const inv=t=>grpOf(t,ns=>ns.filter(n=>P.has(n)).length>=(t==='tag'?2:1)).map(([k])=>`<span class="tag" style="--c:#b4128f;cursor:pointer" data-t="${t}" data-k="${esc(k)}" onclick="openG(this.dataset.t,this.dataset.k)">${esc(t==='tag'?'🤝':'🔥')} ${esc(k)}</span>`).join(' ');const tc=(e.matches||[]).filter(m=>m.title_change);
+pv(`<h2 style="font-size:30px;color:${bc(e.brand)}">${esc(e.name)}</h2><div class="mut">${esc(e.date||'')} • ${esc(e.brand||'')} • ${e.type==='ppv'?'PPV':'Show'}</div><div class="card">Público: ${esc(e.attendance??'—')} • Hype: ${esc(e.hype??'—')} • Coins: ${esc(e.coins??'—')} • Rating: ${stars(e.rating)||'—'}</div><div class="sec">MATCHES</div>${(e.matches||[]).map(mline).join('')||'<div class="mut">Sem lutas.</div>'}<div class="sec">MUDANÇAS DE TÍTULO</div><div class="card">${tc.map(m=>`🏆 ${nm(m.new_champion||m.winner)} → ${esc(m.championship)}`).join('<br>')||'Nenhum título mudou de mãos.'}</div>${(e.stories||[]).length?`<div class="sec">ACONTECIMENTOS</div>${e.stories.map(s=>`<div class="card"><span class="tag">${esc(s.type)}</span>${esc(s.text)}</div>`).join('')}`:''}${e.notes?`<div class="card">${esc(e.notes)}</div>`:''}${inv('tag')||inv('faction')?`<div class="sec">TAG TEAMS / FACTIONS</div>${inv('tag')} ${inv('faction')}`:''}`)}
+function openP(n){const w=S.roster[n]||{},p=pst(n);const cur=TITLES.filter(t=>hasC((S.titles[t[0]]||{}).champ,n));let prev=[],reigns=0,ev=0;TITLES.forEach(t=>{const h=(S.titles[t[0]]||{}).hist||[];h.forEach((x,i)=>{if(!hasC(x.name,n))return;reigns++;const s=evIdx(x),e=i+1<h.length?evIdx(h[i+1]):S.events.length-1;if(s>=0&&e>=0)ev+=e-s});if(h.some(x=>hasC(x.name,n))&&!cur.includes(t))prev.push(t[0])});
+const tt=grpOf('tag',ns=>ns.includes(n)).map(([k])=>k),fc=grpOf('faction',ns=>ns.includes(n)).map(([k,l])=>(l[l.length-1].text||k).split(' — ')[0]),rv=grpOf('rivalry',ns=>ns.includes(n));
+const H=Object.entries(p.H).sort((a,b)=>b[1].n-a[1].n);
+pv(`<h2 style="font-size:32px;color:${bc(w.brand)}">${esc(n)}</h2><div class="mut">${esc(w.brand||'sem brand')} • ${esc(w.alignment||'—')} • ${esc(w.status||'—')}${w.inj?' • 🤕 '+esc(w.inj):''}</div><div class="card"><div>🏆 Títulos atuais: <b>${cur.map(t=>esc(t[0])).join(', ')||'nenhum'}</b></div><div>Anteriores: ${prev.map(esc).join(', ')||'—'}</div><div>Reinados: <b>${reigns}</b> • tempo como campeão: ${ev?ev+' evento(s)':'sem data registrada'}</div><div>🤝 Tag: ${tt.map(esc).join(', ')||'—'} • 🔥 Faction: ${fc.map(esc).join(', ')||'—'}</div></div><div class="card"><div>Record no jogo: <b>${w.w||0}V-${w.l||0}D</b></div><div>Nos eventos registrados: <b>${p.mm.length}</b> lutas • <b>${p.w}</b>V • <b>${p.l}</b>D • <b>${p.d}</b>E</div><div>Sequência: ${p.sw} vitória(s) seguida(s) • ${p.su} luta(s) sem perder${w.pop?' • pop '+w.pop:''}${w.mor?' • moral '+w.mor:''}</div></div><div class="sec">HISTÓRICO RECENTE</div>${p.mm.slice(-5).reverse().map(m=>`<div class="card" style="--c:${{w:'#3ddc84',l:'#b3261e',d:'#d4a017'}[sd(m,n)]}">${sd(m,n)==='w'?'✅ V':sd(m,n)==='l'?'❌ D':'➖ E'} vs ${opp(m,n).map(nm).join(', ')||'—'}<div class="mut">${esc(m.ev)} ${esc(m.championship||'')}</div></div>`).join('')||'<div class="mut">Sem lutas registradas.</div>'}<div class="sec">RIVALIDADES</div>${rv.map(([k,l])=>`<div class="lk" data-k="${esc(k)}" onclick="openG('rivalry',this.dataset.k)">⚔️ ${esc(k)}</div>`).join('')||'<div class="mut">Nenhuma.</div>'}<div class="sec">HEAD-TO-HEAD</div>${H.map(([o,h])=>`<div>vs ${nm(o)}: ${h.n} luta(s) • ${h.w}V ${h.l}D ${h.d}E</div>`).join('')||'<div class="mut">Sem histórico.</div>'}<div class="row" style="margin-top:10px"><select id="h2o"><option value="">Comparar com...</option>${Object.keys(S.roster).filter(x=>x!==n).sort().map(x=>`<option>${esc(x)}</option>`).join('')}</select><button class="btn" style="flex:0 0 auto" data-n="${esc(n)}" onclick="if($('#h2o').value)openH(this.dataset.n,$('#h2o').value)">⚔️ H2H</button></div><div class="row" style="margin-top:8px"><button class="btn s" data-n="${esc(n)}" onclick="openW(this.dataset.n)">📝 Notas</button><button class="btn s" data-n="${esc(n)}" onclick="editW(this.dataset.n)">✏️ Editar</button></div>`)}
+function openH(a,b){const h=pst(a).H[b]||{n:0,w:0,l:0,d:0};pv(`<h2 style="font-size:30px">${nm(a)} vs ${nm(b)}</h2><div class="card"><div>Lutas: <b>${h.n}</b></div><div>${esc(a)} venceu: <b>${h.w}</b></div><div>${esc(b)} venceu: <b>${h.l}</b></div><div>Empates: <b>${h.d}</b></div></div>${h.n?'':'<div class="mut">Sem confrontos registrados.</div>'}${ML().filter(m=>sd(m,a)&&sd(m,b)&&sd(m,a)!==sd(m,b)||(sd(m,a)==='d'&&sd(m,b)==='d')).map(mline).join('')}`)}
+function vG(type,title,ic){const g=Object.entries(groups(type));return`<div class="sec">${ic} ${title}</div>${g.map(([k,l])=>gCard(type,k,l)).join('')||'<div class="mut">Nada registrado ainda.</div>'}`}
+function hl(){const out=[],st=[...new Set(ML().flatMap(m=>m.participants||[]))].map(n=>({n,...pst(n)}));st.filter(x=>x.sw>=3).sort((a,b)=>b.sw-a.sw).slice(0,2).forEach(x=>out.push(`📈 ${x.n.toUpperCase()} ESTÁ EM ${x.sw} VITÓRIAS CONSECUTIVAS`));st.filter(x=>x.su>=3&&x.su>x.sw).sort((a,b)=>b.su-a.su).slice(0,2).forEach(x=>out.push(`🔥 ${x.n.toUpperCase()} ESTÁ ${x.su} LUTAS SEM PERDER`));
+TITLES.forEach(t=>{const c=(S.titles[t[0]]||{}).champ,si=startIdx(t[0]);if(c&&si>=0&&S.events.length-1-si>=1)out.push(`🏆 ${c.toUpperCase()} ESTÁ HÁ ${S.events.length-1-si} EVENTO(S) COMO ${t[0].replace(/^PLW(AR)? /i,'').toUpperCase()}`)});
+let k=0;st.forEach(x=>Object.entries(x.H).forEach(([o,h])=>{if(k<2&&h.n>=2&&h.w===h.n){k++;out.push(`⚔️ ${x.n.toUpperCase()} ESTÁ INVICTO CONTRA ${o.toUpperCase()}`)}}));
+const pp=S.events.filter(e=>e.type==='ppv'&&+e.attendance>0).sort((a,b)=>b.attendance-a.attendance)[0];if(pp)out.push(`🏟️ ${pp.name.toUpperCase()} FOI O PPV COM MAIOR PÚBLICO`);
+return out.length?`<div class="sec">DESTAQUES</div>${out.map(x=>`<div class="card" style="--c:#FF6B00"><b>${esc(x)}</b></div>`).join('')}`:''}
+const _vd=vDash;vDash=function(){return`<div class="row"><button class="btn" onclick="$('#fab').onclick()">📸 ENVIAR PRINT DO SHOW</button><button class="btn o" style="flex:0 0 56px" title="Propor ideias" onclick="openPlans('ia');ideas()">💡</button></div><div class="row" style="margin-top:8px"><button class="btn s" onclick="openPlans()">📝 PLANOS</button><button class="btn s" onclick="go('jj')">🤖 BOOKER AI</button></div>`+bkBanner()+hl()+_vd()};
+const _rd=render;render=function(){_rd();$('#fab').hidden=tab==='dash';if(tab==='sys')bkList()};
+/* Ollama */
+function cleanAIResponse(text){
+ let value=String(text??'').trim();
+ if(!value)return '';
+ const lower=value.toLowerCase();
+ const close=lower.lastIndexOf('</think>');
+ if(close>=0)return value.slice(close+8).trim();
+ const open=lower.indexOf('<think');
+ if(open>=0){
+  const gt=value.indexOf('>',open);
+  if(gt>=0){
+   const tail=value.slice(gt+1).trim();
+   if(!tail)return '';
+   return tail.replace(/<\/?think\b[^>]*>/gi,'').trim();
+  }
+ }
+ return value.replace(/<\/?think\b[^>]*>/gi,'').trim();
+}
+async function callOllama(p,json,onText,system,maxTok){
+ const base='http://127.0.0.1:58307';
+ const endpoint=base+'/v1/chat/completions';
+ const baseSystem=system||'Responda em português do Brasil, de forma direta. Não exponha raciocínio interno. Entregue somente a resposta final ao usuário.';
+ const msgs=[{role:'system',content:baseSystem},{role:'user',content:p}];
+ const requestBody=(messages)=>({
+  model:K.mq||'qwen3:4b',
+  messages:messages,
+  temperature:0.5,
+  max_tokens:300,
+  stream:false
+ });
+ const send=async(body)=>{
+  console.log('========== PLW AI REQUEST ==========');
+  console.log(JSON.stringify(body,null,2));
+  console.log('====================================');
+  const fetchStarted=performance.now();
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),30000);
+  let response;
+  try{
+   console.log('[OLLAMA] antes do fetch');
+   response=await fetch(endpoint,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body),
+    signal:controller.signal
+   });
+   console.log('[OLLAMA] fetch retornou');
+   console.log('[OLLAMA] status HTTP:',response.status,'tempo:',Math.round(performance.now()-fetchStarted)+'ms');
+   if(!response.ok){
+    const errorText=await response.text().catch(()=>'(não foi possível ler o corpo da resposta)');
+    throw{message:'API local HTTP '+response.status+': '+errorText};
+   }
+   let payload;
+   try{payload=await response.json()}catch(e){throw{message:'A API local retornou uma resposta JSON inválida (HTTP '+response.status+').'}}
+   console.log('[OLLAMA] JSON recebido','tempo:',Math.round(performance.now()-fetchStarted)+'ms');
+   if(payload.error)throw{message:'API local '+response.status+': '+(payload.error?.message||payload.error||'sem detalhe')};
+   const content=payload?.choices?.[0]?.message?.content??'';
+   console.log('[OLLAMA] content recebido','tempo:',Math.round(performance.now()-fetchStarted)+'ms');
+   return payload;
+  }catch(e){
+   if(e?.name==='AbortError')throw{message:'A chamada ao llama-server excedeu o tempo limite de 30 segundos.'};
+   if(e?.message)throw e;
+   throw{message:'Não consegui conectar ao servidor local em '+base+'. Confira se o llama-server está aberto e se a origem local está permitida.'};
+  }finally{clearTimeout(timer)}
+ };
+ let data=await send(requestBody(msgs));
+ let raw=data?.choices?.[0]?.message?.content??'';
+ let answer=cleanAIResponse(raw);
+ if(answer){
+  console.log('[OLLAMA] resposta final','tempo concluído');
+ }else{
+  const retryMessages=msgs.concat([{role:'user',content:'Responda agora SOMENTE com a resposta final, em português do Brasil, de forma curta e natural. Não gere nem inclua raciocínio, análise, planejamento, tags <think> ou explicações sobre como responder. Resposta final:'}]);
+  data=await send(requestBody(retryMessages));
+  raw=data?.choices?.[0]?.message?.content??'';
+  answer=cleanAIResponse(raw);
+  if(answer)console.log('[OLLAMA] resposta final','tempo concluído (retry)');
+ }
+ if(!answer)throw{message:'O llama-server retornou uma resposta vazia. Não foi possível obter uma resposta final em message.content.'};
+ if(onText)onText({text:answer});
+ return answer;
+}
+// Teste isolado opcional: execute window.testPLWAIRequest() no Console do navegador.
+window.testPLWAIRequest=async function(){
+ const testBody={
+  model:K.mq||'qwen3:4b',
+  messages:[{role:'user',content:'Responda somente: TESTE OK'}],
+  temperature:0.5,
+  max_tokens:300,
+  stream:false
+ };
+ const started=performance.now();
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),30000);
+ try{
+  console.log('[OLLAMA TESTE] antes do fetch');
+  const response=await fetch('http://127.0.0.1:58307/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(testBody),signal:controller.signal});
+  console.log('[OLLAMA TESTE] fetch retornou','status:',response.status,'tempo:',Math.round(performance.now()-started)+'ms');
+  const data=await response.json();
+  console.log('[OLLAMA TESTE] JSON recebido','tempo:',Math.round(performance.now()-started)+'ms');
+  const content=data?.choices?.[0]?.message?.content??'';
+  console.log('[OLLAMA TESTE] content recebido:',content,'tempo:',Math.round(performance.now()-started)+'ms');
+  return content;
+ }finally{clearTimeout(timer)}
+};
+
+sample=async(p,o={})=>{const e=o.engine||K.engine;if(e==='ollama'){const t=await callOllama(p,false,o.onText,o.system,o.maxTok);return{text:t}}const t=await callAI(e,p,o.images,false);if(o.onText)o.onText({text:t});return{text:t}};
+sample.json=async(p,o={})=>{let e=o.engine||K.engine;if(e==='ollama'){if(o.images&&o.images.length)e=K.gemini?'gemini':'openai';else return JSON.parse(await callOllama(p,true,null,o.system,o.maxTok))}const t=await callAI(e,p,o.images,true);return JSON.parse(t.replace(/```json|```/g,'').trim())};
+
+/* ===== v3: planos popout, backup, autocomplete Tab, tag teams, rivalidades ===== */
+if(!K.v2){K.engine='ollama';K.v2=1;saveK()}
+S.planBoard=S.planBoard||{mensal:'',anual:'',ppv:''};
+const dt=t=>{try{return new Date(t).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}catch(e){return''}};
+function fdt(t){try{return t?new Date(t).toLocaleDateString('pt-BR'):''}catch(e){return''}}
+let _pt;function persistD(){clearTimeout(_pt);_pt=setTimeout(persist,500)}
+/* ---- PLANOS (popout) ---- */
+let PT='mensal';
+const PTABS=[['mensal','📅 MENSAL'],['anual','🗓️ ANUAL'],['ppv','🏟️ PRÓXIMO PPV'],['ia','💡 IDEIAS IA']];
+function pbd(){S.planBoard=S.planBoard||{mensal:'',anual:'',ppv:''};return S.planBoard}
+function isPlans(){return !$('#sheet').hidden&&SH.length===1&&String(SH[0]).indexOf('class="plans"')>=0}
+function plansHtml(){const hint={mensal:'Plano do mês: o que quero fazer nos shows e no PPV deste mês.',anual:'Plano do ano: grandes histórias, títulos e PPVs.',ppv:'Card e ideias para o próximo PPV.'};let b;
+if(PT==='ia')b=`<button class="btn o" ${busy?'disabled':''} onclick="ideas()">💡 PROPOR IDEIAS</button><div id="ib" class="bub a" ${IDEA?'':'hidden'}>${esc(IDEA)}</div>${IDEA&&!busy&&!/^(⏳|Erro)/.test(IDEA)?`<div class="mut">SUGGESTION — não entra no histórico.</div><div class="row"><button class="btn g" onclick="saveIdea()">💾 Salvar ideia</button><button class="btn s" onclick="IDEA='';drawPlans()">Descartar</button></div>`:''}<div class="sec">SALVAS (${S.plans.length})</div>${S.plans.map((p,i)=>`<div class="card" style="--c:${p.ai?'#FF6B00':'#6A0DAD'}"><span class="tag" style="--c:${p.ai?'#FF6B00':'#6A0DAD'}">${p.ai?'IA':'MANUAL'}</span><input value="${esc(p.t)}" onchange="S.plans[${i}].t=this.value;persist()"><textarea style="min-height:130px" onchange="S.plans[${i}].x=this.value;persist()">${esc(p.x)}</textarea><button class="btn r" onclick="if(confirm('Apagar esta ideia?')){S.plans.splice(${i},1);persist();drawPlans()}">🗑️ Apagar</button></div>`).join('')||'<div class="mut">Nenhuma ideia salva.</div>'}<button class="btn s" style="margin-top:8px" onclick="S.plans.unshift({t:'Novo plano',x:''});persist();drawPlans()">+ Plano manual</button>`;
+else b=`<div class="mut">${hint[PT]} Tudo aqui é SUGESTÃO, nunca histórico. Dica: digite parte de um nome e aperte Tab.</div><textarea id="pb" style="min-height:340px" oninput="pbd()[PT]=this.value;persistD()">${esc(pbd()[PT]||'')}</textarea>`;
+return`<div class="plans"><h2 style="font-size:30px">📝 PLANOS</h2><nav style="position:sticky;top:0;z-index:3;background:var(--bg);padding:8px 0">${PTABS.map(t=>`<button class="${t[0]===PT?'on':''}" onclick="PT='${t[0]}';drawPlans()">${t[1]}</button>`).join('')}</nav>${b}</div>`}
+function drawPlans(){SH=[plansHtml()];drawSH()}
+function openPlans(t){if(t)PT=t;drawPlans()}
+function saveIdea(){if(!IDEA)return;S.plans.unshift({t:'💡 '+new Date().toLocaleDateString('pt-BR')+' • ideia da IA',x:IDEA,ai:true});persist();IDEA='';drawPlans();toast('💾 Ideia salva em Planos')}
+async function ideas(){if(busy)return;busy=true;IDEA='⏳ gerando ideias...';openPlans('ia');const p="Use só os dados. Não invente fatos. Resposta objetiva.\n\n=== DADOS PLW ===\n"+shortDigest("card ppv rivalidade título plano próximo")+"\n\nTAREFA: ideias para o próximo PPV ("+nextPPV()+") e próximo show: 3 matches com motivo, 2 rivalidades e 1 caminho de título. Cada item com \"SUGGESTION:\".";
+try{await sample(p,{engine:K.engine,system:PERS.jj,maxTok:600,onText:x=>{IDEA=x.text;const b=$('#ib');if(b&&isPlans()&&PT==='ia')b.textContent=IDEA}})}catch(e){IDEA='Erro: '+(e.message||e.code)}busy=false;if(isPlans())drawPlans()}
+const _go=go;go=function(t){if(t==='plan'){openPlans();return}_go(t)};
+const _dg=digest;digest=function(){const b=pbd();return(_dg()+`\n\nPLANOS DO USUÁRIO (SUGESTÕES, NÃO FATOS) — MENSAL: ${b.mensal||'-'} | ANUAL: ${b.anual||'-'} | PRÓXIMO PPV: ${b.ppv||'-'}`).slice(0,K.engine==='ollama'?8000:60000)};
+/* ---- Autocomplete com Tab (estilo Notepad++) ---- */
+const nz=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function acNames(){const s=new Set(Object.keys(S.roster));ML().forEach(m=>(m.participants||[]).forEach(n=>n&&s.add(n)));S.stories.forEach(x=>{if((x.type==='tag'||x.type==='faction')&&x.team)s.add(x.team)});TITLES.forEach(t=>s.add(t[0]));return[...s]}
+function acFind(f){const q=nz(f.trim());if(q.length<2)return[];const P=[],W=[];acNames().forEach(n=>{const x=nz(n);if(x===q)return;if(x.startsWith(q))P.push(n);else if(!/\s/.test(q)&&x.split(/\s+/).some(w=>w.startsWith(q)))W.push(n)});return[...P.sort(),...W.sort()].slice(0,30)}
+function acFrag(el){const pos=el.selectionStart,before=el.value.slice(0,pos);const cut=Math.max(before.lastIndexOf(','),before.lastIndexOf('\n'),before.lastIndexOf('&'),before.lastIndexOf(';'),before.lastIndexOf('('))+1;const seg=before.slice(cut);if(!seg.trim()||/\s$/.test(seg))return null;const W=[...seg.matchAll(/\S+/g)];for(let k=Math.min(W.length,4);k>=1;k--){const st=W[W.length-k].index,L=acFind(seg.slice(st));if(L.length)return{start:cut+st,list:L}}return null}
+let AC={};
+function acPut(el,start,len,txt){el.value=el.value.slice(0,start)+txt+el.value.slice(start+len);const c=start+txt.length;try{el.setSelectionRange(c,c)}catch(e){}el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
+function acStep(el){if(AC.el===el&&AC.list&&AC.cur&&el.selectionStart===AC.start+AC.cur.length&&el.value.slice(AC.start,AC.start+AC.cur.length)===AC.cur&&AC.list.length>1){AC.i=(AC.i+1)%AC.list.length;const n=AC.list[AC.i];acPut(el,AC.start,AC.cur.length,n);AC.cur=n;return true}
+const f=acFrag(el);if(!f)return false;const len=el.selectionStart-f.start;AC={el,start:f.start,list:f.list,i:0,cur:f.list[0]};acPut(el,f.start,len,f.list[0]);return true}
+document.addEventListener('keydown',e=>{if(e.key!=='Tab'||e.shiftKey||e.ctrlKey||e.altKey||e.metaKey)return;const el=e.target;if(!el||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;if(el.tagName==='INPUT'&&!/^(text|search)$/.test(el.type||'text'))return;if(tab==='sys'&&$('#sheet').hidden)return;if(acStep(el))e.preventDefault()},true);
+function openQS(){SH=[];pv(`<h2 style="font-size:28px">🔎 BUSCAR</h2><div class="mut">Digite parte do nome e aperte <b>Tab</b> para completar (Tab de novo troca a sugestão). <b>Enter</b> abre a ficha. Vale para lutadores, tag teams e factions.</div><input id="qs" autocomplete="off" placeholder="ex.: kevi + Tab" oninput="qsl()" onkeydown="if(event.key==='Enter')qsg()"><div id="qsr"></div>`);setTimeout(()=>{const e=$('#qs');if(e)e.focus()},60)}
+function qsKind(n){if(S.roster[n]||ML().some(m=>(m.participants||[]).includes(n)))return'p';const s=S.stories.find(x=>x.team===n);return s?s.type:''}
+function qsOpen(n){const k=qsKind(n);if(k==='p')openP(n);else if(k)openG(k,n)}
+function qsl(){const v=$('#qs').value,L=acFind(v).filter(qsKind);$('#qsr').innerHTML=L.slice(0,12).map(n=>`<div class="card lk" data-n="${esc(n)}" onclick="qsOpen(this.dataset.n)">${qsKind(n)==='p'?'👤':qsKind(n)==='tag'?'🤝':'🔥'} ${esc(n)}</div>`).join('')}
+function qsg(){const v=$('#qs').value.trim();if(!v)return;const ex=acNames().find(n=>nz(n)===nz(v)&&qsKind(n));const n=ex||acFind(v).find(qsKind);if(n)qsOpen(n);else toast('Ninguém encontrado: '+v)}
+/* ---- Backup automático (IndexedDB) + lembrete de exportar ---- */
+const hasData=x=>x&&((x.events||[]).length||Object.keys(x.roster||{}).length||(x.plans||[]).length||(x.stories||[]).length);
+function idb(){return new Promise((ok,no)=>{try{const r=indexedDB.open('plw-bk',1);r.onupgradeneeded=()=>r.result.createObjectStore('s',{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}})}
+async function bkAll(){const d=await idb();return new Promise((ok,no)=>{const r=d.transaction('s').objectStore('s').getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>no(r.error)})}
+async function bkPut(rec){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('s','readwrite');t.objectStore('s').put(rec);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
+async function bkDel(id){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('s','readwrite');t.objectStore('s').delete(id);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
+let _bt;function bkSoon(){clearTimeout(_bt);_bt=setTimeout(autoBk,2000)}
+async function autoBk(){try{if(!hasData(S))return;const ts=Date.now(),rec={ts,ev:S.events.length,ro:Object.keys(S.roster).length,json:JSON.stringify(S)};await bkPut({id:'latest',...rec});const all=(await bkAll()).filter(x=>String(x.id).startsWith('snap-')).sort((a,b)=>a.ts-b.ts);if(!all.length||ts-all[all.length-1].ts>30*60000){await bkPut({id:'snap-'+ts,...rec});all.push({id:'snap-'+ts});}while(all.length>8){await bkDel(all.shift().id)}}catch(e){}}
+const _ps=persist;persist=function(){_ps();bkSoon()};
+async function bkBoot(){try{if(hasData(S))return;const all=(await bkAll()).sort((a,b)=>b.ts-a.ts);if(!all.length)return;if(confirm('Não achei seus dados neste navegador, mas existe um backup automático de '+dt(all[0].ts)+' ('+all[0].ev+' eventos). Restaurar agora?')){S=norm(JSON.parse(all[0].json));persist();render();toast('✅ Backup automático restaurado')}}catch(e){}}
+async function bkRestore(id){try{const r=(await bkAll()).find(x=>x.id===id);if(!r)return;if(!confirm('Restaurar o backup de '+dt(r.ts)+'? Isso substitui os dados atuais.'))return;S=norm(JSON.parse(r.json));persist();render();toast('✅ Backup restaurado')}catch(e){toast('Não consegui restaurar')}}
+async function bkList(){const e=$('#bkl');if(!e)return;try{const all=(await bkAll()).sort((a,b)=>b.ts-a.ts);e.innerHTML=all.map(x=>`<div class="row" style="align-items:center;margin:4px 0"><div class="mut" style="flex:1">${x.id==='latest'?'⭐ Último':'📌 Ponto'} • ${esc(dt(x.ts))} • ${x.ev} eventos • ${x.ro} lutadores</div><button class="btn s" style="flex:0 0 auto;padding:6px 10px" onclick="bkRestore('${x.id}')">Restaurar</button></div>`).join('')||'<div class="mut">Ainda não há backup automático (ele grava 2s depois de cada alteração).</div>'}catch(er){e.innerHTML='<div class="mut">Backup automático indisponível neste navegador.</div>'}}
+const _eb=exportBk;exportBk=function(){_eb();try{localStorage.setItem('plw-lastexp',String(Date.now()))}catch(e){}};
+function bkBanner(){if(!hasData(S))return'';let t=0;try{t=+localStorage.getItem('plw-lastexp')||0}catch(e){}const d=t?Math.floor((Date.now()-t)/864e5):-1;if(d>=0&&d<7)return'';return`<div class="card" style="--c:#b3261e"><b>🛟 ${d<0?'Você ainda não exportou nenhum backup.':'Faz '+d+' dias sem exportar backup.'}</b><div class="mut">O navegador pode apagar o LocalStorage. O arquivo exportado é o backup de verdade.</div><button class="btn s" style="margin-top:6px" onclick="exportBk();render()">⬇️ Exportar agora</button></div>`}
+const _vs=vSys;vSys=function(){return _vs()+`<div class="card"><h3>🛟 Backup automático</h3><div class="mut">Uma cópia é gravada a cada alteração (mais pontos de restauração a cada 30 min) em outro armazenamento do navegador. Se limparem o LocalStorage, ele te oferece restaurar sozinho. Se limpar TODOS os dados do site, isso some também, então exporte o arquivo de vez em quando.</div><div id="bkl" class="mut">carregando...</div></div>`};
+async function testOl(){const o=$('#olr');o.textContent='testando...';try{const base=String(K.ollama||'http://127.0.0.1:58307').replace(/\/$/,'');const r=await fetch(base+'/v1/models');if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json(),ms=Array.isArray(j.data)?j.data.map(m=>m.id||m.name).filter(Boolean):[];const ok=ms.length>0;o.innerHTML=(ok?'✅ Ollama OK. ':'⚠️ Ollama respondeu, mas não há modelo local carregado. ')+'Modelos: '+(ms.map(esc).join(', ')||'nenhum')+'<br>Modelo configurado: <b>'+esc(K.mq||'qwen3:4b')+'</b><br>Motor atual: <b>'+esc(K.engine)+'</b>'}catch(e){o.innerHTML='❌ Não consegui falar com o servidor local em '+esc(String(K.ollama||'http://127.0.0.1:58307'))+'. Verifique se o llama-server está aberto.<br>Motor atual: <b>'+esc(K.engine)+'</b>'}}
+/* ---- Tag teams / factions / rivalidades ---- */
+function gCard(type,k,l){const ns=[...new Set(l.flatMap(s=>s.names||[]))],f=l[0],t=l[l.length-1].text||'';const st=type==='rivalry'?(/encerrada/.test(t)?' • 🏁 encerrada':' • 🔥 ativa'):'';return`<div class="card" style="--c:#b4128f;cursor:pointer" data-t="${type}" data-k="${esc(k)}" onclick="openG(this.dataset.t,this.dataset.k)"><h3>${type==='rivalry'?'⚔️ ':type==='tag'?'🤝 ':'🔥 '}${esc(k)}</h3><div>${ns.map(nm).join(' • ')}</div><div class="mut">${esc(t)}</div><div class="mut">${f.since?'desde '+esc(f.since)+' • ':''}${l.length} registro(s)${st}</div></div>`}
+function openG(type,k){const l=groups(type)[k]||[];if(!l.length)return;const f=l[0],last=l[l.length-1],ns=[...new Set(l.flatMap(s=>s.names||[]))];const same=(m,a,b)=>sd(m,a)&&sd(m,b)&&sd(m,a)===sd(m,b);
+const mm=type==='tag'?ML().filter(m=>ns.length>1&&ns.every(n=>same(m,n,ns[0]))):type==='faction'?ML().filter(m=>ns.some(n=>sd(m,n))):ML().filter(m=>ns.length>1&&ns.every(n=>sd(m,n)));
+const wn=mm.filter(m=>ns.some(n=>sd(m,n)==='w')).length,ls=mm.filter(m=>ns.some(n=>sd(m,n)==='l')).length;const evi=[...new Set(mm.map(m=>m.ei))];
+const rg=[];TITLES.forEach(t=>((S.titles[t[0]]||{}).hist||[]).forEach(x=>{const cs=String(x.name||'').split(' & ');if(type==='tag'?ns.every(n=>cs.includes(n)):type==='faction'?ns.some(n=>cs.includes(n)):false)rg.push({t:t[0],x})}));
+const cur=TITLES.filter(t=>{const c=(S.titles[t[0]]||{}).champ;return c&&(type==='tag'?ns.every(n=>hasC(c,n)):ns.some(n=>hasC(c,n)))}).map(t=>t[0]);
+const ld=(last.text||'').match(/líder: (.+)$/),ended=/encerrada/.test(last.text||'');const ic=type==='rivalry'?'⚔️':type==='tag'?'🤝':'🔥';
+const h2=type==='rivalry'&&ns.length===2?pst(ns[0]).H[ns[1]]:null;
+pv(`<h2 style="font-size:30px">${ic} ${esc(k)}</h2><div class="card">${ld?'👑 Líder: '+nm(ld[1])+'<br>':''}${type==='rivalry'?'Participantes':'Membros'}: ${ns.map(nm).join(' • ')}<br>📅 ${f.since?'Desde <b>'+esc(f.since)+'</b> (data do registro)':'Primeiro registro: '+esc((f.event||'')+' '+(f.date||''))}${type==='rivalry'?' • '+(ended?'🏁 encerrada':'🔥 ativa'):' • status: ativo'}<br>${evi.length?'De <b>'+esc(S.events[evi[0]].name)+'</b> até <b>'+esc(S.events[evi[evi.length-1]].name)+'</b>':'Sem lutas registradas juntos'}${type==='rivalry'?'':`<br>Lutas: ${mm.length} • ${wn}V ${ls}D`}<br>Títulos hoje: ${cur.map(esc).join(', ')||'—'}${type==='rivalry'?'':`<br>Reinados registrados: ${rg.length}${rg.length?' ('+[...new Set(rg.map(x=>x.t))].map(esc).join(', ')+')':''}`}</div>${h2?`<div class="card"><b>Head-to-head:</b> ${h2.n} luta(s) • ${esc(ns[0])} ${h2.w}V • ${esc(ns[1])} ${h2.l}V • ${h2.d} empate(s)</div>`:''}${evi.length?`<div class="sec">EVENTOS</div><div>${evi.map(i=>`<span class="tag lk" style="--c:#6A0DAD" onclick="openE(${i})">${esc(S.events[i].name)}</span>`).join(' ')}</div>`:''}<div class="sec">EVOLUÇÃO</div>${l.map(s=>`<div class="card"><div>${esc(s.text)}</div><div class="mut">${esc(s.since||'')} ${esc(s.event||'')} ${esc(s.date||'')}</div></div>`).join('')}<div class="sec">LUTAS</div>${mm.slice(-10).reverse().map(mline).join('')||'<div class="mut">Sem lutas registradas.</div>'}`)}
+
+
+/* PLW BOOKER — melhorias localizadas solicitadas */
+const _applySavePLW=applySave;
+applySave=function(d){
+  _applySavePLW(d);
+  try{
+    const C={};(d.collections||[]).forEach(c=>C[c.name]=c.data||[]);
+    const items={};(C.SegmentItems||[]).forEach(x=>items[x.$loki]=x);
+    const segs={};(C.Segments||[]).forEach(s=>(segs[s.eventId]=segs[s.eventId]||[]).push(s));
+    (draft.evs||[]).forEach(ev=>{
+      const id=String(ev.id||'').replace(/^sv/,'');
+      ev.stories=(segs[id]||[]).slice().sort((a,b)=>(a.order||0)-(b.order||0)).map(s=>{
+        const it=items[s.segmentItemId]||{};
+        const people=Array.isArray(s.participants)?s.participants:[];
+        return {type:'appearance',names:people,text:[it.name,it.description,it.text].filter(Boolean).join(' — ')||'Segmento registrado',rating:s.rating,hype:s.hype,order:s.order,src:'save'};
+      });
+    });
+    const names=[...new Set((C.Events||[]).filter(e=>!e.weeklyShow&&e.name).map(e=>String(e.name).trim()))];
+    if(names.length){S.cal=Array.from({length:12},(_,i)=>names[i]||'');}
+  }catch(e){console.warn('Complemento do save:',e)}
+};
+function eventResultText(e){
+ const lines=[e.name||'Show',e.brand?'Brand: '+e.brand:'',e.date?'Data: '+e.date:'',e.type?'Tipo: '+(e.type==='ppv'?'PPV':'Show'):''].filter(Boolean);
+ lines.push('', 'LUTAS');
+ (e.matches||[]).forEach((m,i)=>{
+  lines.push((i+1)+'. '+((m.participants||[]).join(' vs ')||'Luta'));
+  if(m.winner)lines.push('   Vencedor: '+m.winner);
+  if(m.loser)lines.push('   Derrotado(s): '+m.loser);
+  if(m.stipulation)lines.push('   Estipulação: '+m.stipulation);
+  if(m.championship)lines.push('   Título: '+m.championship+(m.title_change?' — MUDANÇA DE TÍTULO':''));
+  if(m.new_champion)lines.push('   Novo campeão: '+m.new_champion);
+  if(m.rating!=null&&m.rating!=='')lines.push('   Rating: '+m.rating);
+  if(m.notes)lines.push('   Notas: '+m.notes);
+ });
+ lines.push('', 'PROMOS / SEGMENTOS / APARIÇÕES');
+ (e.stories||[]).forEach((s,i)=>lines.push((i+1)+'. '+(s.names&&s.names.length?s.names.join(', ')+': ':'')+(s.text||'' )+(s.rating!=null?' — Rating: '+s.rating:'')));
+ if(!(e.stories||[]).length)lines.push('Nenhum registrado.');
+ ['attendance','hype','coins','rating','notes'].forEach(k=>{if(e[k]!=null&&e[k]!=='')lines.push((({attendance:'Público',hype:'Hype',coins:'Coins',rating:'Rating',notes:'Informações'})[k])+': '+e[k])});
+ return lines.join('\n');
+}
+function copyShow(id){
+ const e=S.events.find(x=>String(x.id)===String(id));if(!e)return;
+ const txt=eventResultText(e);
+ const done=()=>toast('✅ Resultado copiado!');
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
+ else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,done){const t=document.createElement('textarea');t.value=txt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{document.execCommand('copy');done()}catch(e){toast('Não foi possível copiar automaticamente.')}t.remove()}
+evCard=function(e){
+ const eid=esc(e.id);
+ return `<details class="card" style="--c:${bc(e.brand)}"><summary><b>${esc(e.name)}</b> <span class="mut">${esc(e.date||'')} • ${esc(e.brand||'')}</span><div class="mut">Público ${esc(e.attendance??'—')} • Hype ${esc(e.hype??'—')} • Coins ${esc(e.coins??'—')} • ${stars(e.rating)}</div></summary><div class="row" style="margin:8px 0"><button class="btn s" onclick="copyShow('${eid}')">📋 COPIAR RESULTADO</button></div><div class="sec">LUTAS / RESULTADOS</div>${(e.matches||[]).map(mline).join('')||'<div class="mut">Nenhuma luta registrada.</div>'}<div class="sec">PROMOS / SEGMENTOS / APARIÇÕES</div>${(e.stories||[]).map(s=>`<div class="card"><b>${esc((s.names||[]).join(', '))}</b> ${esc(s.text||'')}${s.rating!=null?' • '+stars(s.rating):''}</div>`).join('')||'<div class="mut">Nenhum segmento registrado.</div>'}${e.notes?`<div class="mut">${esc(e.notes)}</div>`:''}</details>`;
+};
+function rosterStatusHtml(n,w){
+ const p=pst(n),items=[];
+ if(w.status==='lesionado'||w.status==='suspenso')items.push(['⚠️',w.status==='lesionado'?'Lesionado':'Suspenso']);
+ if(TITLES.some(t=>hasC((S.titles[t[0]]||{}).champ,n)))items.push(['🏆','Campeão atual']);
+ if(p.sw>=3)items.push(['🔥','Sequência de '+p.sw+' vitórias']);else if(p.su>=3)items.push(['🔥',p.su+' lutas sem derrota']);
+ if(p.sw>=3)items.push(['📈','Em sequência positiva']);
+ if(p.mm.length>=3&&p.sw===0&&p.su===0&&p.l>=3)items.push(['📉','Sequência recente de derrotas']);
+ return items.map(([e,label])=>`<span title="${label}" aria-label="${label}">${e}</span>`).join(' ');
+}
+function rosterStatus(n,w){
+ const p=pst(n);const out=[];
+ if(w.status==='lesionado'||w.status==='suspenso')out.push('⚠️');
+ if(TITLES.some(t=>hasC((S.titles[t[0]]||{}).champ,n)))out.push('🏆');
+ if(p.sw>=3)out.push('🔥','📈');else if(p.su>=3)out.push('🔥');
+ if(p.mm.length>=3&&p.sw===0&&p.su===0&&p.l>=3)out.push('📉');
+ return [...new Set(out)].join('');
+}
+vRoster=function(){
+ const all=Object.entries(S.roster);
+ const r=all.filter(([n,w])=>(!rf.q||n.toLowerCase().includes(rf.q.toLowerCase()))&&(!rf.b||bk(w.brand)===rf.b)&&(!rf.a||(String(w.alignment||'').toLowerCase()===rf.a))).sort((a,b)=>(b[1].w||0)-(a[1].w||0));
+ const so=(v,l,c)=>`<option value="${v}" ${c===v?'selected':''}>${l}</option>`;
+ return `<div class="sec">ROSTER (${r.length}/${all.length})</div><div class="row"><button class="btn o" onclick="mode='roster';files=[];openSheet(upSheet())">📥 Importar roster</button><button class="btn" onclick="openSaveUp()">💾 Upar save do jogo</button></div><input id="rq" style="margin-top:8px" placeholder="🔍 Buscar lutador..." value="${esc(rf.q)}" oninput="rf.q=this.value;rfr()"><div class="row"><select onchange="rf.b=this.value;render()">${so('','Todas as brands',rf.b)}${so('PLWAR','PLWAR',rf.b)}${so('MOTION','PLW MOTION',rf.b)}${so('SHOW OFF','PLW SHOW OFF',rf.b)}</select><select onchange="rf.a=this.value;render()">${so('','Todos alinhamentos',rf.a)}${so('face','Face',rf.a)}${so('heel','Heel',rf.a)}${so('neutral','Neutral',rf.a)}</select></div><div class="grid" style="margin-top:8px">${r.map(([n,w])=>`<div class="card" style="--c:${bc(w.brand)}"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3 class="lk" data-n="${esc(n)}" onclick="openP(this.dataset.n)">${esc(n)}</h3><button class="btn s" style="flex:0 0 auto;padding:4px 9px" data-n="${esc(n)}" onclick="editW(this.dataset.n)">✏️</button></div><div class="mut">${esc(w.brand||'')} • ${esc(w.alignment||'neutral')} ${esc(w.status||'')} ${rosterStatus(n,w)}</div><div><b>${w.w||0}</b>V • <b>${w.l||0}</b>D</div></div>`).join('')}</div>${all.length?'':'<div class="mut">Importe o roster, envie o save do jogo ou salve shows para preenchê-lo.</div>'}`;
+};
+vBrands=function(){
+ const B=[['PLWAR','PLWAR'],['MOTION','PLW MOTION'],['SHOW OFF','PLW SHOW OFF']],h4='<div class="sec" style="font-size:18px;margin:10px 0 4px">';
+ return `<div class="sec">🎨 BRANDS</div>`+B.map(([k,n])=>{
+  const ws=Object.entries(S.roster).filter(([,w])=>bk(w.brand)===k),ts=TITLES.filter(t=>t[1]===k),ev=S.events.filter(e=>bk(e.brand)===k).slice(-3).reverse();
+  return `<div class="card" style="--c:${bc(k)};border-left-width:8px"><h3 style="color:${bc(k)};font-size:32px">${n}</h3><div class="mut">${ws.length} lutadores • ${ts.length} título(s)</div>${h4}TÍTULOS</div>${ts.map(t=>`<div>🏆 ${esc(t[0])}: <b>${esc((S.titles[t[0]]||{}).champ||'VAGO')}</b></div>`).join('')}${h4}ROSTER</div><div>${ws.map(([x,w])=>`<span class="tag" data-n="${esc(x)}" onclick="openP(this.dataset.n)" style="--c:${bc(k)};cursor:pointer;margin:2px 0">${S.notes[x]&&(S.notes[x].cur||S.notes[x].plan)?'📝 ':''}${esc(x)} • ${esc(w.alignment||'neutral')}${w.status==='lesionado'?' 🤕':''} ${rosterStatusHtml(x,w)}</span>`).join(' ')||'<span class="mut">Sem lutadores. Importe o roster escolhendo esta brand.</span>'}</div><div class="mut" style="margin-top:6px">Legenda: ⚠️ lesionado/suspenso • 🏆 campeão atual • 🔥 sequência positiva/sem derrota • 📈 3+ vitórias seguidas • 📉 sequência recente de derrotas. Passe/toque no emoji para ver o significado; toque no nome para abrir o perfil.</div>${h4}ÚLTIMOS EVENTOS</div>${ev.map(e=>`<div>${esc(e.name)} <span class="mut">${esc(e.date||'')}</span></div>`).join('')||'<div class="mut">Nenhum.</div>'}</div>`;
+ }).join('')+`<div class="card" style="--c:#d4a017;border-left-width:8px"><h3 style="color:#d4a017;font-size:32px">GLOBAL</h3>${TITLES.filter(t=>t[1]==='GLOBAL').map(t=>`<div>🏆 ${esc(t[0])}: <b>${esc((S.titles[t[0]]||{}).champ||'VAGO')}</b></div>`).join('')}</div>`;
+};
+/* Conversas por persona: histórico limitado, sessão reiniciada após 5 minutos. */
+const chatLast={},chatTimers={};
+function endChat(key,notify=false){chats[key]=[];delete chatLast[key];clearTimeout(chatTimers[key]);delete chatTimers[key];if(notify)toast('✕ Conversa encerrada. Pode começar outra.');if(['jj','hal','tony','dirk'].includes(key)&&tab===key)render();}
+function touchChat(key){chatLast[key]=Date.now();clearTimeout(chatTimers[key]);chatTimers[key]=setTimeout(()=>endChat(key,true),300000)}
+const _askOriginal=ask;
+ask=async function(key,text){
+ if(!sample){toast('IA indisponível nesta visualização.');return}
+ if(chatLast[key]&&Date.now()-chatLast[key]>=300000)endChat(key,false);
+ const h=chats[key];h.push({r:'u',t:text});const a={r:'a',t:''};h.push(a);touchChat(key);busy=true;render();
+ const conv=h.slice(0,-2).slice(-8).map(x=>(x.r==='u'?'Usuário: ':'Persona: ')+x.t).join('\n');
+ const want=needsData(text),data=want?ollamaContext(text):'';
+ const compactConv=conv.slice(-4000);
+ const p=(want?'Use somente os dados abaixo para fatos PLW. Não invente resultados; propostas futuras podem ser sugestões. ':'')+(want?'=== DADOS PLW ===\n'+data+'\n':'')+'=== HISTÓRICO RECENTE ===\n'+compactConv+'\nUsuário: '+text+'\nResponda agora como persona, em português do Brasil. Não exponha raciocínio interno.';
+ try{await sample(p,{engine:K.engine,system:PERS[key],onText:x=>{a.t=x.text;upd(key)},maxTok:300});}
+ catch(e){a.t=a.t||('Erro: '+(e.message||e.code))}
+ busy=false;touchChat(key);render();
+};
+vChat=function(key,title,hint){
+ const h=chats[key];
+ return `<div class="sec">${title}</div><div class="mut">${hint}</div><div id="chat-${key}">${h.map((x,i)=>`<div class="bub ${x.r}">${esc(x.t)||'<span class=spin>…</span>'}${x.r==='a'&&x.t?`<div style="margin-top:8px"><button class="btn s" onclick="saveChatIdea('${key}',${i})">💡 SALVAR IDEIA</button></div>`:''}</div>`).join('')}</div><div class="row" style="margin-top:8px"><input id="in-${key}" placeholder="Pergunte algo..." onkeydown="if(event.key==='Enter')send('${key}')"><button class="btn" style="flex:0 0 auto" ${busy?'disabled':''} onclick="send('${key}')">Enviar</button><button class="btn r" style="flex:0 0 auto" onclick="endChat('${key}',true)">✕ ENCERRAR CONVERSA</button></div>`;
+};
+function saveChatIdea(key,i){const a=(chats[key]||[])[i];if(!a||a.r!=='a'||!a.t)return;S.plans.unshift({t:'💡 '+key.toUpperCase()+' • '+new Date().toLocaleDateString('pt-BR'),x:a.t,ai:true,kind:'suggestion'});persist();toast('💡 Ideia salva em Planos — sem alterar o histórico.');}
+const _readSaveOriginal=readSave;
+readSave=async function(f){await _readSaveOriginal(f);};
+
+loadLocal();nav();render();
+
+</script>
+</body>
+</html>
