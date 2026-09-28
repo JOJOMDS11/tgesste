@@ -434,7 +434,7 @@ async function callOllama(p,json,onText,system,maxTok){
   model:K.mq||'qwen3:4b',
   messages:messages,
   temperature:0.5,
-  max_tokens:300,
+  max_tokens:Math.max(1,Math.min(Number(maxTok)||120,220)),
   stream:false
  });
  const send=async(body)=>{
@@ -494,7 +494,7 @@ window.testPLWAIRequest=async function(){
   model:K.mq||'qwen3:4b',
   messages:[{role:'user',content:'Responda somente: TESTE OK'}],
   temperature:0.5,
-  max_tokens:300,
+  max_tokens:120,
   stream:false
  };
  const started=performance.now();
