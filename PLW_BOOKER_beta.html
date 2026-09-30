@@ -4054,8 +4054,18 @@ Regras:
   const VETO_RX = /\b(nao|n[aã]o)\s+(pode|rola|serve|quero|da|d[aá])|vet(o|amos|ar)|fora\b|esquece|descarta|tira |n\s*da|n[aã]o\s+da|nao\s+pode\s+ser|n[aã]o\s+pode\s+ser|rejeit/i;
   const ASK_OPP_RX = /quem\s+(deve|vai|pode)\s+(lutar|enfrentar)|advers[aá]rio|oponente|contra\s+quem|desafiante/i;
   const MULTI_RX = /fatal\s*4|fatal\s*four|four[\s-]*way|triple\s*threat|tripla|1\s*contender|number\s*one\s*contender|#?\s*1\s*contender|al[eé]m\s+d[oe]|que\s+nomes|quais\s+nomes|quem\s+entra|multi[\s-]?man/i;
-  const LOCK_RX = /\b([ée]|eh)\s+[A-Za-zÀ-ÿ]|fechad[oa]|confirmad[oa]|vamos\s+de\b|vai\s+lutar\s+contra|o\s+nome\s+[ée]|decidid[oa]|pode\s+ser\s+[A-Za-zÀ-ÿ].*\bfinal\b/i;
+  const LOCK_RX = /(?:^|[.!?]\s*)(?:é|eh)\s+[A-Za-zÀ-ÿ]+\s*(?:x|vs\.?|versus)\s+[A-Za-zÀ-ÿ]|fechad[oa]:|fechamos|ta\s+fechado|t[aá]\s+fechado|confirmad[oa]:|vamos\s+de\b|vai\s+lutar\s+contra|o\s+nome\s+[ée]\b|decidid[oa]:/i;
 
+  function ppvLabel(m){ const t=String((m&&m.target)||''); return m&&m.mode==='ppv' ? t.split(' — ')[0].trim() : ''; }
+  function switchFocal(m, d, s, newFocal){
+    const nf=C(newFocal); if(!nf || C(d.focal||'')===nf) return false;
+    d.focal=nf; d.topic='adversário de '+nf; d.shortlist=[]; d.proposed=[]; d.liked=[]; d.rejected=[]; d.question='';
+    if(d.mode==='locked'||d.mode==='pick'||d.mode==='multi') d.mode='discuss';
+    s.meetingTopicCandidates=[]; s.meetingLiked=[]; s.meetingDisliked=[]; s.meetingTurnBlocks=[]; s.lastShortlist=[];
+    s.open={type:'opponent',focal:nf};
+    console.log('[PLW] FOCO ->',nf);
+    return true;
+  }
   function absorbUser(m, text){
     const d = debate(m);
     const s = typeof meetingStateEnsure==='function' ? meetingStateEnsure(m) : {};
@@ -4064,6 +4074,9 @@ Regras:
     d.lastUser = raw;
     let names = [];
     try{ names = (typeof resolveRosterMentions==='function'?resolveRosterMentions(raw):[]).map(C).filter(Boolean); }catch(e){}
+
+    if(s.open && s.open.focal && C(s.open.focal)!==C(d.focal||'')) switchFocal(m, d, s, s.open.focal);
+    else if(names.length===1 && /(precisamos|preciso|quero|falta|vaga|algu[eé]m|lutador|nome)[^.!?\n]{0,60}(enfrentar|lutar|contra)|(enfrentar|contra)\s+(o\s+|a\s+)?\S+/i.test(raw) && C(names[0])!==C(d.focal||'') && !VETO_RX.test(raw) && !(d.lockedMatches||[]).some(lm=>(lm.names||[]).map(C).includes(C(names[0])) && /fechad/i.test(raw))) switchFocal(m, d, s, names[0]);
 
     /* shortlist explícita: "Zack, Místico e GUNTHER" */
     if(names.length>=2 && /(qual|favorito|entre|desses|destes|plwar)/i.test(raw)){
@@ -4086,13 +4099,13 @@ Regras:
     }
 
     /* lock decision: "É GUNTHER o nome" / "GUNTHER vai lutar contra Moxley" */
-    if(LOCK_RX.test(raw) || /\b(é|eh|e)\s+gunther|\bgunther\s+[ée]|\bvai\s+lutar\s+contra\b/i.test(raw)){
+    if(LOCK_RX.test(raw) && !/(?:^|\s)n[aã]o\s+(?:quero|pode|vai|d[aá])/i.test(raw) && !/\?\s*$/.test(raw)){
       const a = names.find(n=>!d.focal || C(n)!==C(d.focal)) || names[0];
       const b = d.focal || names.find(n=>C(n)!==C(a));
       if(a && b){
         const key = [C(a),C(b)].sort().join('|');
         if(!d.lockedMatches.some(x=>x.key===key)){
-          d.lockedMatches.push({key, names:[C(a),C(b)], event:'Final Battle', note:'fechado pelo head booker'});
+          d.lockedMatches.push({key, names:[C(a),C(b)], event:ppvLabel(m), note:'fechado pelo head booker'});
         }
         d.liked = [...new Set((d.liked||[]).concat([C(a)]))];
         /* don't reject the locked challenger */
