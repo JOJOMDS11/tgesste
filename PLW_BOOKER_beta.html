@@ -725,33 +725,109 @@ async function streamCompletion(base,prompt,mt,onText,onStatus,TAG){
  const ctl=new AbortController(),t0=performance.now();
  let first=false,acc='',cut=false;
  const st=x=>{if(onStatus)onStatus(x)};
- const ft=setTimeout(()=>{if(!first)ctl.abort()},90000);
- const tick=setInterval(()=>{if(!first)st('processando o prompt ('+Math.round((performance.now()-t0)/1000)+'s)')},1000);
+ const ft=setTimeout(()=>{if(!first)ctl.abort()},180000);
+ const tick=setInterval(()=>{if(!first)st('processando ('+Math.round((performance.now()-t0)/1000)+'s)')},1000);
+
  try{
   st('enviando '+prompt.length+' caracteres');
-  const r=await fetch(base+'/completion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,n_predict:mt,temperature:0.6,stop:['<|im_end|>','<|im_start|>'],stream:true,cache_prompt:true}),signal:ctl.signal});
-  if(!r.ok)throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,300));
-  const rd=r.body.getReader(),dec=new TextDecoder();let buf='';
+
+  const r=await fetch(base+'/completion',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+    prompt,
+    n_predict:mt,
+    temperature:0.4,
+    stop:['<|im_end|>','<|im_start|>'],
+    stream:true,
+    cache_prompt:true
+   }),
+   signal:ctl.signal
+  });
+
+  if(!r.ok){
+   throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,500));
+  }
+
+  const rd=r.body.getReader();
+  const dec=new TextDecoder();
+  let buf='';
+
   for(;;){
-   const {done,value}=await rd.read();if(done)break;
+   const {done,value}=await rd.read();
+   if(done)break;
+
    buf+=dec.decode(value,{stream:true});
-   let i;while((i=buf.indexOf('\n'))>=0){
-    const line=buf.slice(0,i).trim();buf=buf.slice(i+1);
-    if(!line.startsWith('data:'))continue;
-    const j=line.slice(5).trim();if(!j||j==='[DONE]')continue;
-    let o;try{o=JSON.parse(j)}catch(e){continue}
-    if(o.content){if(!first){first=true;clearTimeout(ft);clearInterval(tick);console.log(TAG,'primeiro token em',Math.round(performance.now()-t0)+'ms')}acc+=o.content;const c=cleanAIResponse(acc);if(LEAK.test(c)&&!/[áâãéêíóôõúç]/i.test(c.slice(0,200))){ctl.abort();const er=new Error('O modelo está pensando em inglês (Qwen3 Thinking não desliga o raciocínio). Troque para o Qwen3-4B-Instruct-2507.');er.leak=true;throw er}if(c&&onText)onText({text:c})}
-    if(o.stopped_limit)cut=true
-    if(o.stop&&o.timings)console.log(TAG,'timings',JSON.stringify(o.timings))
+
+   let i;
+   while((i=buf.indexOf('\n'))>=0){
+    const line=buf.slice(0,i).trim();
+    buf=buf.slice(i+1);
+
+    if(!line)continue;
+
+    let o;
+    try{
+     if(line.startsWith('data:')){
+      const data=line.slice(5).trim();
+      if(!data||data==='[DONE]')continue;
+      o=JSON.parse(data);
+     }else{
+      o=JSON.parse(line);
+     }
+    }catch(e){
+     continue;
+    }
+
+    console.log(TAG,'chunk:',JSON.stringify(o));
+
+    const content=
+     o.content ??
+     o.token ??
+     o.response ??
+     o.choices?.[0]?.text ??
+     o.choices?.[0]?.delta?.content ??
+     '';
+
+    if(content){
+     if(!first){
+      first=true;
+      clearTimeout(ft);
+      clearInterval(tick);
+      console.log(TAG,'primeiro token em',Math.round(performance.now()-t0)+'ms');
+     }
+
+     acc+=content;
+
+     const c=cleanAIResponse(acc);
+     if(c&&onText)onText({text:c});
+    }
+
+    if(o.stop||o.stopped_limit||o.stopped_word)cut=true;
+
+    if(o.timings){
+     console.log(TAG,'timings',JSON.stringify(o.timings));
+    }
    }
   }
-  window.__olCut=cut;return acc;
+
+  window.__olCut=cut;
+  console.log(TAG,'RESPOSTA FINAL:',acc);
+  return acc;
+
  }catch(e){
-  if(e&&e.leak)throw e;
   if(acc.trim())return acc;
-  if(e&&e.name==='AbortError')throw new Error('o servidor não devolveu nenhum token em 90s (prompt de '+prompt.length+' caracteres). Use 🩺 Testar Ollama na aba Sistema.');
+
+  if(e&&e.name==='AbortError'){
+   throw new Error('o servidor não devolveu nenhum token em 180s.');
+  }
+
   throw e;
- }finally{clearTimeout(ft);clearInterval(tick)}
+
+ }finally{
+  clearTimeout(ft);
+  clearInterval(tick);
+ }
 }
 const _olKind={};
 async function olKind(base){
@@ -800,16 +876,140 @@ async function callBookerAI(p,system,maxTok,onText,onStatus){
  const sys=system||'Responda em português do Brasil, de forma direta.';
  const mt=Math.min(Math.max(Number(maxTok)||600,100),1000);
  const TAG='[BOOKER AI]';
- let raw;
- try{raw=await streamOllamaChat(base,sys,p,mt,onText,onStatus,TAG)}
- catch(e){
-  if(e&&e.leak)throw e;
-  if(e&&e.name==='TypeError')throw new Error('Não consegui conectar ao Ollama em '+base+'. Ele está aberto? (erro: '+(e.message||e)+')');
+
+ try{
+  const kind=await olKind(base);
+
+  if(kind==='llama'){
+   const ctl=new AbortController();
+   const t0=performance.now();
+   let first=false,acc='';
+
+   const ft=setTimeout(()=>{
+    if(!first)ctl.abort();
+   },180000);
+
+   const tick=setInterval(()=>{
+    if(!first && onStatus){
+     onStatus('processando ('+Math.round((performance.now()-t0)/1000)+'s)');
+    }
+   },1000);
+
+   try{
+    const r=await fetch(base+'/v1/chat/completions',{
+     method:'POST',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({
+      model:K.mq||'qwen3:4b',
+      messages:[
+       {role:'system',content:sys},
+       {role:'user',content:p}
+      ],
+      stream:true,
+      max_tokens:mt,
+      temperature:0.4,
+      reasoning_effort:'none',
+      reasoning_format:'none',
+      chat_template_kwargs:{
+       enable_thinking:false
+      }
+     }),
+     signal:ctl.signal
+    });
+
+    if(!r.ok){
+     throw new Error('llama-server HTTP '+r.status+': '+(await r.text()).slice(0,500));
+    }
+
+    const rd=r.body.getReader();
+    const dec=new TextDecoder();
+    let buf='';
+
+    for(;;){
+     const {done,value}=await rd.read();
+     if(done)break;
+
+     buf+=dec.decode(value,{stream:true});
+
+     let i;
+     while((i=buf.indexOf('\n'))>=0){
+      const line=buf.slice(0,i).trim();
+      buf=buf.slice(i+1);
+
+      if(!line||!line.startsWith('data:'))continue;
+
+      const data=line.slice(5).trim();
+      if(!data||data==='[DONE]')continue;
+
+      let o;
+      try{
+       o=JSON.parse(data);
+      }catch(e){
+       continue;
+      }
+
+      const delta=o.choices?.[0]?.delta||{};
+      const content=delta.content||'';
+
+      if(content){
+       if(!first){
+        first=true;
+        clearTimeout(ft);
+        clearInterval(tick);
+        console.log(TAG,'primeiro token em',Math.round(performance.now()-t0)+'ms');
+       }
+
+       acc+=content;
+
+       const c=cleanAIResponse(acc);
+       if(c&&onText)onText({text:c});
+      }
+
+      if(o.choices?.[0]?.finish_reason){
+       console.log(TAG,'finish_reason:',o.choices[0].finish_reason);
+      }
+     }
+    }
+
+    console.log(TAG,'RESPOSTA FINAL:',acc);
+    return acc;
+
+   }finally{
+    clearTimeout(ft);
+    clearInterval(tick);
+   }
+
+  }else{
+   return await streamOllamaChat(
+    base,
+    sys,
+    p,
+    mt,
+    onText,
+    onStatus,
+    TAG
+   );
+  }
+
+ }catch(e){
+  if(e&&e.name==='AbortError'){
+   throw new Error('O servidor não devolveu resposta em 180s.');
+  }
+
+  if(e&&e.name==='TypeError'){
+   throw new Error(
+    'Não consegui conectar ao servidor em '+base+
+    '. (erro: '+(e.message||e)+')'
+   );
+  }
+
   throw e;
  }
+
  const out=cleanAIResponse(String(raw??'')).trim();
  if(out)return out;
- throw new Error('O Ollama terminou sem texto.');
+
+ throw new Error('O servidor terminou sem texto.');
 }
 async function bookerSample(p,o={}){
  const e=o.engine||K.engine;
@@ -1430,7 +1630,7 @@ const _vPressWithEnd=vPress;vPress=function(){let h=_vPressWithEnd();if(S.press?
 const _vDraftFinal=vDraft;vDraft=function(){let h=_vDraftFinal(),year=String(S.annualDraftYear||draftYearDefault());if(S.annualDraft?.[year]?.generatedAt)h=h.replace(/(<button class="btn s" onclick="draftComplete\('[^']+'\)">[^<]*<\/button>)/,`$1<button class="btn s" style="width:100%;margin-top:8px" onclick="draftRun(true)">Refazer sugestões deste Draft</button>`);return h};
 loadLocal();nav();render();
 
-window.startBookingMeeting = startBookingMeeting;
+if(typeof startBookingMeeting==='function')window.startBookingMeeting = startBookingMeeting; /* fix: a função é declarada no 2º <script>; aqui ainda não existe */
 </script>
 
 <script>
@@ -1759,21 +1959,100 @@ function removeRepeatedResponseText(text){const paragraphs=String(text||'').spli
 
 
 function bookingMeetingContext(){return buildMeetingContext()}
+
 let meetingStartLocked=false;
+
 function startBookingMeeting(){
  if(busy||meetingStartLocked)return;
- const mode=$('#meeting-mode')?.value||'free';let target=($('#meeting-target')?.value||'').trim();
+
+ const mode=$('#meeting-mode')?.value||'free';
+ let target=($('#meeting-target')?.value||'').trim();
  const opening=($('#meeting-opening')?.value||'').trim();
- if(target==='__custom__')target=($('#meeting-target-custom')?.value||'').trim();
- if(mode!=='free'&&!target)return toast('Escolha um alvo da lista.');
- if(mode==='ppv'&&target.includes('|')){const parts=target.split('|'),name=parts[0],year=parts[1];if(ppvRecorded(name,year))return toast('Esse PPV já aparece no histórico. Escolha um PPV futuro.');target=name+' — '+year}
- if(mode==='show'&&target.includes('|'))target=target.replace('|',' — ');
- const labels={month:'Planejamento do mês',show:'Planejamento de show futuro',ppv:'Planejamento de PPV futuro',rivalry:'Reunião sobre rivalidade',title:'Reunião sobre campeonato',free:'Reunião livre'};
- const meeting={id:Date.now(),mode,modeLabel:labels[mode]||'Reunião livre',target:target||'Livre',wrestlers:[...(S._meetingWrestlers||[])],rosterBrand:S._meetingRosterBrand||'ALL',phase:'panorama',messages:[],planDraft:'',confirmedText:'',ideasText:'',pendingText:'',confirmedAt:'',savedIdeas:[],requestInFlight:true,state:null};
- S.bookingMeeting=meeting;const state=meetingStateEnsure(meeting);S._meetingWrestlers=[];meetingStartLocked=true;
- if(opening){meeting.messages.push({role:'user',persona:'user',text:opening});meetingUpdateFromUser(meeting,opening)}else state.currentTopic=target||'';
- persist();render();
- Promise.resolve(meetingRunPanel(meeting.phase,opening)).finally(()=>{meetingStartLocked=false;if(S.bookingMeeting===meeting){meeting.requestInFlight=false;persist()}});
+
+ if(target==='__custom__'){
+  target=($('#meeting-target-custom')?.value||'').trim();
+ }
+
+ if(mode!=='free'&&!target){
+  return toast('Escolha um alvo da lista.');
+ }
+
+ if(mode==='ppv'&&target.includes('|')){
+  const parts=target.split('|');
+  const name=parts[0];
+  const year=parts[1];
+
+  if(ppvRecorded(name,year)){
+   return toast('Esse PPV já aparece no histórico. Escolha um PPV futuro.');
+  }
+
+  target=name+' — '+year;
+ }
+
+ if(mode==='show'&&target.includes('|')){
+  target=target.replace('|',' — ');
+ }
+
+ const labels={
+  month:'Planejamento do mês',
+  show:'Planejamento de show futuro',
+  ppv:'Planejamento de PPV futuro',
+  rivalry:'Reunião sobre rivalidade',
+  title:'Reunião sobre campeonato',
+  free:'Reunião livre'
+ };
+
+ const meeting={
+  id:Date.now(),
+  mode,
+  modeLabel:labels[mode]||'Reunião livre',
+  target:target||'Livre',
+  wrestlers:[...(S._meetingWrestlers||[])],
+  rosterBrand:S._meetingRosterBrand||'ALL',
+  phase:'panorama',
+  messages:[],
+  planDraft:'',
+  confirmedText:'',
+  ideasText:'',
+  pendingText:'',
+  confirmedAt:'',
+  savedIdeas:[],
+  requestInFlight:true,
+  state:null
+ };
+
+ S.bookingMeeting=meeting;
+
+ const state=meetingStateEnsure(meeting);
+
+ S._meetingWrestlers=[];
+ meetingStartLocked=true;
+
+ if(opening){
+  meeting.messages.push({
+   role:'user',
+   persona:'user',
+   text:opening
+  });
+
+  meetingUpdateFromUser(meeting,opening);
+ }else{
+  state.currentTopic=target||'';
+ }
+
+ persist();
+ render();
+
+ Promise.resolve(
+  meetingRunPanel(meeting.phase,opening)
+ ).finally(()=>{
+  meetingStartLocked=false;
+
+  if(S.bookingMeeting===meeting){
+   meeting.requestInFlight=false;
+   persist();
+  }
+ });
 }
 function sendMeetingMessage(){
  const input=$('#meeting-input'),text=(input&&input.value||'').trim(),meeting=S.bookingMeeting;
@@ -4846,5 +5125,188 @@ Regras:
   };
 
   console.log('[PLW] V33 — lock forçado (sem modelo) + input após última fala');
+})();
+</script>
+
+<script>
+/* ===== PLW_MTG_CANON_GUARD — correção cirúrgica da Reunião de Booking =====
+   CAUSA: o runner ativo da reunião é V28 (linha ~4299) embrulhado por V32/V33. Ele monta o prompt com
+   window.buildPrompt (V3 + wrappers), que NÃO inclui o SAVE CANON: buildMeetingContext() só era chamado
+   pelos runners V1/V2, hoje sobrescritos. E o checkText do V3 só enxerga nomes que EXISTEM no roster,
+   então nome inventado ("Viper", "Rook"...) passa batido.
+   ESTE BLOCO:
+   1) injeta SAVE CANON + ELENCO VÁLIDO no prompt de cada voz;
+   2) audita a fala (nome fora do roster; nota, empate, sequência, confronto passado e rivalidade sem base
+      no save; nome rejeitado pelo head booker) e remove a frase antes de exibir;
+   3) faz o checkText acusar o problema, para o V28 refazer a fala uma vez com correção.
+   NÃO mexe em callBookerAI, bookerSample, llama.cpp nem no modo solo. */
+(function(){
+ 'use strict';
+ if(window.__PLW_MTG_CANON_GUARD__)return;
+ window.__PLW_MTG_CANON_GUARD__=true;
+ try{
+ const F=s=>plwFold(s),CN=n=>plwCanonicalName(n);
+ const uniq=a=>[...new Set(a)];
+ const cap=(s,n)=>{s=String(s||'');return s.length>n?s.slice(0,n).replace(/\s+\S*$/,'')+' …':s};
+
+ /* palavras que nunca são "lutador inventado": estruturais, estipulações, meses, eventos do calendário */
+ const BASE=new Set(('plw plwar motion show off purple league wrestling journey of head booker jj gendo ikari dirk analista creative room hal tony '
+  +'ppv tv dq global world tag team championship title titulo campeonato cinturao brand roster card main event ladder cage steel tables street fight '
+  +'last man standing quit iron falls count fatal way triple threat gauntlet battle royal rumble hell cell tlc elimination chamber scramble submission '
+  +'cash mania build ideia sim nao ok fechado concordo discordo janeiro fevereiro marco abril maio junho julho agosto setembro outubro novembro dezembro '
+  +'segunda terca quarta quinta sexta sabado domingo brasil final collision coliseum reign beast mode eye blackout high life new level super aces august madness raindrops').split(' '));
+
+ const NEG=/\bfora\b|\bsem\b|descart|\bsai\b|\bnao\b|rejeit|vetad|\bja (tem|esta|foi)\b/;
+ const PAST=/\b(derrotou|venceu|bateu|superou|ganhou de|perdeu (para|de|pra)|enfrentou|enfrentaram|lutaram|lutou|se enfrentaram|ja (se )?enfrent\w+|revanche|rematch)\b/;
+ const FEUD=/\b(rivalidade|rixa|feud)\b/;
+ const FUT=/\b(criar|construir|iniciar|comecar|abrir|nova|novo|build|ideia|poderia|podemos|vamos|vai|seria|sera|proponho)\b/;
+ const STREAK=/sequ[eê]ncia de (\d+)|(\d+) (?:vit[oó]rias|lutas) (?:seguidas|consecutivas)|invicto/i;
+ const STARTNEXT=new Set('vs x contra enfrenta enfrentando derrota derrotou vence venceu perde perdeu luta lutou merece ganha ganhou entra entrou volta fecha deveria deve pode poderia seria vai e esta estava tem teve foi ja nunca com tambem continua segue sai sobe precisa quer defende defendeu bate bateu traz'.split(' '));
+
+ /* ---------- vocabulário permitido: SÓ save + head booker (nunca fala de persona) ---------- */
+ function vocab(m,extra){
+  const set=new Set(BASE);
+  const add=t=>{F(t).split(' ').forEach(x=>{if(x.length>1)set.add(x)})};
+  Object.keys(S.roster||{}).forEach(n=>{add(n);add(CN(n));add((S.roster[n]||{}).brand)});
+  (typeof TITLES!=='undefined'?TITLES:[]).forEach(t=>add(t[0]+' '+t[1]));
+  (S.events||[]).forEach(e=>{add(e.name);(e.matches||[]).forEach(x=>{add(x.stipulation);add(x.championship)})});
+  (S.stories||[]).forEach(s=>{add((s.names||[]).join(' '));add(s.text)});
+  Object.keys(S.ppvPlans||{}).forEach(add);
+  ((m&&m.messages)||[]).filter(x=>x.role==='user').forEach(x=>add(x.text));
+  if(m){add(m.target);add(m.openingTopic)}
+  add(extra);
+  return set;
+ }
+
+ /* ---------- nomes próprios que não existem no save ---------- */
+ const core=w=>w.replace(/^[("“‘'\[]+|[)"”’'\].,;:!?…]+$/g,'');
+ const isCap=c=>/^[A-ZÀ-Ý][\p{L}'’-]*$/u.test(c)&&!(c===c.toUpperCase()&&c.length<=5);
+ const unknownTok=(t,V)=>F(t).split(' ').some(x=>x.length>1&&!V.has(x));
+ function foreignNames(s,V){
+  const w=[...String(s).matchAll(/\S+/g)].map(x=>x[0]),out=[];
+  let i=0;
+  while(i<w.length){
+   const c=core(w[i]);
+   if(!isCap(c)){i++;continue}
+   const prev=i?w[i-1]:'',start=i===0||/[.!?…:—–]$/.test(prev)||/^[—–-]$/.test(prev);
+   const toks=[c];let j=i;
+   while(!/[.,;:!?…)]$/.test(w[j])&&j+1<w.length&&isCap(core(w[j+1]))){j++;toks.push(core(w[j]))}
+   const next=j+1<w.length?F(w[j+1]):'';
+   let test=toks;
+   if(start){
+    if(toks.length===1)test=STARTNEXT.has(next)?toks:[];      /* palavra comum no início da frase */
+    else if(unknownTok(toks[0],V)&&!toks.slice(1).some(t=>unknownTok(t,V)))test=[];  /* "Então Moxley" */
+   }
+   const unk=test.filter(t=>unknownTok(t,V));
+   if(unk.length)out.push(toks.join(' '));
+   i=j+1;
+  }
+  return uniq(out);
+ }
+
+ /* ---------- fatos do save ---------- */
+ const matches=()=>{const o=[];(S.events||[]).forEach(e=>(e.matches||[]).forEach(mm=>o.push(mm)));return o};
+ const shared=(a,b)=>matches().some(mm=>{const p=(mm.participants||[]).map(CN);return p.includes(a)&&p.includes(b)});
+ const beat=(a,b)=>matches().some(mm=>!/empate|draw/i.test(String(mm.winner||''))&&plwSides(mm.winner).map(CN).includes(a)&&plwSides(mm.loser).map(CN).includes(b));
+ const feudPair=(a,b)=>(S.stories||[]).some(x=>x.type==='rivalry'&&(x.names||[]).map(CN).includes(a)&&(x.names||[]).map(CN).includes(b))||shared(a,b);
+ const rejected=m=>{
+  try{
+   const st=meetingStateEnsure(m)||{};
+   return uniq([...(st.excluded||[]).map(x=>x&&x.name||x),...(((st.debate||{}).rejected)||[]).map(x=>x&&x.name||x),...(st.meetingDisliked||[])].filter(Boolean).map(CN));
+  }catch(e){return[]}
+ };
+ const stars=t=>{const s=new Set();let r;const rx=/(\d+(?:[.,]\d+)?)\s*★/g;while((r=rx.exec(t)))s.add(parseFloat(r[1].replace(',','.')));return s};
+
+ /* ---------- bloco SAVE CANON + ELENCO (mesmo universo do modo solo) ---------- */
+ function canonBlock(m,key){
+  let ctx='';
+  try{ctx=String(buildMeetingContext()||'')}catch(e){}
+  let save='';
+  const i=ctx.indexOf('SAVE CANON');
+  if(i>=0){save=ctx.slice(i);const j=save.search(/\n\s*\n|\nLOUSA/);if(j>0)save=save.slice(0,j)}
+  const by={};
+  uniq(Object.keys(S.roster||{})).forEach(n=>{const b=(S.roster[n]||{}).brand||'?';(by[b]=by[b]||[]).push(CN(n)+(typeof bkOut==='function'&&bkOut(n)?' (indisponível)':''))});
+  const roster=cap(Object.keys(by).map(b=>b+': '+uniq(by[b]).join(', ')).join('\n'),2200);
+  const role=key==='tony'?'\nCREATIVE ROOM: você pode inventar FUTURO (ângulo, stip, promo, build) usando só lutadores do ELENCO; jamais invente passado.'
+   :key==='hal'?'\nANALISTA: cite apenas números escritos acima ou em FATOS VERIFICADOS. Sem número no texto, diga que o save não tem.':'';
+  return '=== SAVE CANON (única fonte do passado; o mesmo do modo solo) ===\n'
+   +'ELENCO VÁLIDO — estes são os ÚNICOS lutadores que existem. Qualquer outro nome de lutador é inventado e PROIBIDO:\n'+roster+'\n'
+   +(save?cap(save,2600)+'\n':'')
+   +'REGRAS DE VERDADE:\n'
+   +'- Só é fato do passado (luta, resultado, nota ★, empate, campeão, sequência, rivalidade) o que está escrito neste bloco ou em FATOS VERIFICADOS. Se não está, diga que não tem o dado; não estime.\n'
+   +'- As falas anteriores das vozes no HISTÓRICO são opinião/proposta, NUNCA evidência do passado. Só decisões e rejeições do HEAD BOOKER são direção.\n'
+   +'- Nunca crie lutador, apelido ou personagem novo. Ideias de futuro usam apenas o ELENCO VÁLIDO.'+role;
+ }
+
+ /* ---------- auditoria de uma fala ---------- */
+ function audit(text){
+  const m=S.bookingMeeting||{},plan=window.__mtgPlan||{};
+  const facts=String(window.__mtgCanon||'')+'\n'+String(plan.factsTxt||'')+'\n'+String(plan.candTxt||'')+'\n'+String(plan.board||'');
+  const V=vocab(m,facts),okStars=stars(facts),rej=rejected(m);
+  const keep=[],drop=[];
+  for(const s of String(text||'').split(/(?<=[.!?…])\s+/)){
+   if(!s.trim())continue;
+   const f=F(s);let why='';
+   const bad=foreignNames(s,V);
+   if(bad.length)why='nome que não existe no roster: '+bad.join(', ');
+   if(!why){const b=[...stars(s)].filter(v=>![...okStars].some(x=>Math.abs(x-v)<=0.06));if(b.length)why='nota '+b.join(', ')+'★ que não está no save'}
+   if(!why&&/\bempate\b|\bdraw\b/.test(f)&&!/empate|draw/i.test(facts))why='empate que não está no save';
+   if(!why){const r=STREAK.exec(s);if(r){const n=r[1]||r[2];const ok=n?new RegExp(n+'[^\\n]{0,25}vit|vit[^\\n]{0,25}'+n,'i').test(facts):/invicto/i.test(facts);if(!ok)why='sequência de vitórias que o save não registra'}}
+   const names=uniq(resolveRosterMentions(s).map(CN));
+   if(!why&&names.length&&rej.length&&!NEG.test(f)){const h=names.filter(n=>rej.includes(n));if(h.length)why='nome rejeitado pelo head booker: '+h.join(', ')}
+   if(!why&&names.length>=2&&PAST.test(f)){
+    let ok=false;
+    for(let a=0;a<names.length&&!ok;a++)for(let b=a+1;b<names.length&&!ok;b++)if(shared(names[a],names[b]))ok=true;
+    const dv=/(.*?)\b(derrotou|venceu|bateu|superou|ganhou de)\b(.*)/i.exec(s),pp=/(.*?)\bperdeu (?:para|de|pra)\b(.*)/i.exec(s);
+    if(ok&&(dv||pp)){
+     const L=uniq(resolveRosterMentions((dv||pp)[1]).map(CN)),R=uniq(resolveRosterMentions((dv?dv[3]:pp[2])).map(CN));
+     if(L.length&&R.length)ok=dv?L.some(a=>R.some(b=>beat(a,b))):L.some(a=>R.some(b=>beat(b,a)));
+    }
+    if(!ok)why='confronto/resultado passado que o save não registra ('+names.join(' x ')+')';
+   }
+   if(!why&&names.length>=2&&FEUD.test(f)&&!FUT.test(f)){
+    let ok=false;
+    for(let a=0;a<names.length&&!ok;a++)for(let b=a+1;b<names.length&&!ok;b++)if(feudPair(names[a],names[b]))ok=true;
+    if(!ok)why='rivalidade passada que o save não registra';
+   }
+   if(why)drop.push({s,why});else keep.push(s);
+  }
+  return{clean:keep.join(' ').trim(),dropped:drop};
+ }
+ window.__mtgAudit=audit;   /* para testar no console: __mtgAudit('texto') */
+
+ /* ---------- ganchos (todos por cima da cadeia existente; nada é reescrito) ---------- */
+ const _plan=window.buildPlan;
+ if(typeof _plan==='function')window.buildPlan=function(){const p=_plan.apply(this,arguments);window.__mtgPlan=p;return p};
+
+ const _prompt=window.buildPrompt;
+ if(typeof _prompt==='function')window.buildPrompt=function(key,plan,m,message,round,extra){
+  window.__mtgKey=key;if(plan)window.__mtgPlan=plan;
+  const c=canonBlock(m||S.bookingMeeting||{},key);
+  window.__mtgCanon=c;
+  return c+'\n\n'+_prompt.apply(this,arguments);
+ };
+
+ const _check=window.checkText;
+ if(typeof _check==='function')window.checkText=function(){
+  let base=[];
+  try{base=_check.apply(this,arguments)||[]}catch(e){}
+  try{const a=audit(arguments[0]);if(a.dropped.length)base=base.concat(['Reescreva sem: '+a.dropped.map(d=>d.why).join('; ')+'. Use só lutadores do ELENCO VÁLIDO e fatos do SAVE CANON.'])}catch(e){}
+  return base;
+ };
+
+ const SAFE='Isso eu não consigo sustentar com o que está no save. Me diz um nome do roster ou por onde você quer seguir.';
+ const _fin=window.finalizeText;
+ if(typeof _fin==='function')window.finalizeText=function(t){
+  let x=t;
+  try{
+   const a=audit(t);
+   if(a.dropped.length){console.warn('[PLW canon-guard] frases removidas:',a.dropped);x=a.clean||SAFE}
+  }catch(e){console.error('[PLW canon-guard]',e)}
+  return _fin.call(this,x);
+ };
+
+ console.log('[PLW] MTG CANON GUARD ativo — SAVE CANON no prompt + auditoria de nomes/fatos');
+ }catch(e){console.error('[PLW] MTG CANON GUARD falhou ao iniciar (reunião segue como antes):',e)}
 })();
 </script>
