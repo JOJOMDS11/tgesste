@@ -337,13 +337,13 @@ async function ask(key,text,box){
  const user={r:'u',t:clean},answer={r:'a',t:'',requestId:req};
  h.push(user,answer);privateTurnLocks[key]=req;touchChat(key);busy=true;render();
  const userTexts=h.filter(x=>x!==answer&&x.r==='u').map(x=>x.t),dirState=plwDirectionState(userTexts),carry=plwCarryNames(userTexts.slice(0,-1).slice(-3),clean),directive=plwTurnDirective(clean,false);
- const turns=h.filter(x=>x!==answer).slice(-12).map(x=>(x.r==='u'?'USUÁRIO / DIREÇÃO':'FALA ANTERIOR DA PERSONA — continuidade, não evidência')+': '+String(x.t||'').slice(0,700)).join('\n');
+ const turns=h.filter(x=>x!==answer).slice(plwIsFollowUp(clean)?-12:-3).map(x=>(x.r==='u'?'USUÁRIO / DIREÇÃO':'FALA ANTERIOR DA PERSONA — continuidade, não evidência')+': '+String(x.t||'').slice(0,700)).join('\n');
  const wantsBooking=/book|booking|luta|desafiante|rivalidade|storyline|ppv|show|campeonato|contra|\bvs\b|\bx\b/i.test(clean);
  const prompt='Você é '+({jj:'J.J. Purple',hal:'Analista PLW',tony:'Creative Room',dirk:'Dirk The Truth'}[key]||'uma persona PLW')+' num chat privado individual com o head booker. Fale só como essa pessoa; não simule reunião nem fale pelas outras personas.\n'+
  'ORDEM DE AUTORIDADE: 1) SAVE ATUAL abaixo; 2) decisões, rejeições e correções do usuário nesta conversa; 3) falas anteriores, só para continuidade; 4) conhecimento geral. Uma resposta antiga sua nunca prova um resultado.\n'+
  buildSaveCanonContext(clean,h.filter(x=>x.r==='u'),[],false,{rejections:dirState.rejections,brandFix:dirState.brandFix,notBrand:dirState.notBrand,carry})+'\n'+privateChatNotes(h)+'\n'+
  'HISTÓRICO DA CONVERSA:\n'+(turns||'(início)')+'\n'+(directive?'AGORA: '+directive+'\n':'')+
- 'Responda primeiro à mensagem atual, sem recomeçar o assunto nem repetir a resposta anterior. Ao propor uma luta, use apenas nomes da lista de candidatos válidos. Decisão do usuário é direção final: execute-a e não volte a vender alternativas. Ideia rejeitada não volta, nem reformulada. Ideias futuras são propostas, não fatos; nunca invente passado. Se uma luta já ocorreu, chame-a de revanche e só a proponha com justificativa. Fale como um booker humano, em português brasileiro, 2 a 5 frases na maior parte das vezes (mais só se ele pedir plano ou card), sem lista, sem cabeçalho e sem linguagem de banco de dados ("não há registro", "segundo os dados"). Termine naturalmente, sem fechar a conversa por conta própria; uma pergunta curta só se ajudar a decidir (é melhor perguntar do que inventar).\n'+
+ 'Responda primeiro à mensagem atual, sem recomeçar o assunto nem repetir a resposta anterior. Se a mensagem atual for de outro assunto, ignore o histórico: não traga lutador, rivalidade ou plano que o usuário não citou agora. Nunca comece com \"Entendi o plano\". Ao propor uma luta, use apenas nomes da lista de candidatos válidos. Decisão do usuário é direção final: execute-a e não volte a vender alternativas. Ideia rejeitada não volta, nem reformulada. Ideias futuras são propostas, não fatos; nunca invente passado. Se uma luta já ocorreu, chame-a de revanche e só a proponha com justificativa. Fale como um booker humano, em português brasileiro, 2 a 5 frases na maior parte das vezes (mais só se ele pedir plano ou card), sem lista, sem cabeçalho e sem linguagem de banco de dados ("não há registro", "segundo os dados"). Termine naturalmente, sem fechar a conversa por conta própria; uma pergunta curta só se ajudar a decidir (é melhor perguntar do que inventar).\n'+
  'MENSAGEM ATUAL DO USUÁRIO:\n'+clean+'\nResponda uma única vez.';
  try{
   window.__olCut=false;
@@ -525,7 +525,7 @@ const _cs=closeSheet;closeSheet=function(){SH=[];_cs()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden){e.preventDefault();SH.length>1?back():closeSheet()}});
 function ML(){const a=[];S.events.forEach((e,ei)=>(e.matches||[]).forEach(m=>a.push({...m,ev:e.name,brand:e.brand,date:e.date,ei})));return a}
 function sd(m,n){const P=m.participants||[];if(!P.includes(n)&&!spn(m.winner).includes(n)&&!spn(m.loser).includes(n))return'';if(/empate|draw/i.test(m.winner||''))return'd';if(spn(m.winner).includes(n))return'w';return m.winner?'l':''}
-function opp(m,n){const s=sd(m,n);if(s==='w')return spn(m.loser);if(s==='l')return spn(m.winner);return(m.participants||[]).filter(x=>x!==n)}
+function opp(m,n){const P=(m.participants||[]).filter(x=>x&&x!==n);if(P.length>=2)return P;const s=sd(m,n);if(s==='w')return spn(m.loser);if(s==='l')return spn(m.winner);return P}
 function pst(n){const mm=ML().filter(m=>sd(m,n));let w=0,l=0,d=0;const H={};mm.forEach(m=>{const s=sd(m,n);s==='w'?w++:s==='l'?l++:d++;opp(m,n).forEach(o=>{if(o===n)return;const h=H[o]||(H[o]={w:0,l:0,d:0,n:0});h.n++;h[s]++})});let sw=0,su=0;for(let i=mm.length-1;i>=0&&sd(mm[i],n)==='w';i--)sw++;for(let i=mm.length-1;i>=0&&sd(mm[i],n)!=='l';i--)su++;return{mm,w,l,d,H,sw,su}}
 function evIdx(x){for(let i=S.events.length-1;i>=0;i--)if(S.events[i].name===x.event)return i;return-1}
 function startIdx(t){const c=S.titles[t]||{},h=c.hist||[];const tc=ML().filter(m=>m.championship===t&&m.title_change);if(tc.length)return tc[tc.length-1].ei;return h.length?evIdx(h[h.length-1]):-1}
@@ -546,7 +546,7 @@ pv(`<h2 style="font-size:30px;color:${bc(e.brand)}">${esc(e.name)}</h2><div clas
 function openP(n){const w=S.roster[n]||{},p=pst(n);const cur=TITLES.filter(t=>hasC((S.titles[t[0]]||{}).champ,n));let prev=[],reigns=0,ev=0;TITLES.forEach(t=>{const h=(S.titles[t[0]]||{}).hist||[];h.forEach((x,i)=>{if(!hasC(x.name,n))return;reigns++;const s=evIdx(x),e=i+1<h.length?evIdx(h[i+1]):S.events.length-1;if(s>=0&&e>=0)ev+=e-s});if(h.some(x=>hasC(x.name,n))&&!cur.includes(t))prev.push(t[0])});
 const tt=grpOf('tag',ns=>ns.includes(n)).map(([k])=>k),fc=grpOf('faction',ns=>ns.includes(n)).map(([k,l])=>(l[l.length-1].text||k).split(' — ')[0]),rv=grpOf('rivalry',ns=>ns.includes(n));
 const H=Object.entries(p.H).sort((a,b)=>b[1].n-a[1].n);
-pv(`<h2 style="font-size:32px;color:${bc(w.brand)}">${esc(n)}${moodTag(n)}</h2><div class="mut">${esc(w.brand||'sem brand')} • ${esc(w.alignment||'—')} • ${esc(w.status||'—')}${w.susp?' • ⛔ suspenso: '+esc(w.susp):''}${w.inj?' • 🤕 '+esc(w.inj):''}</div>${moodLine(n)}<div class="card"><div>🏆 Títulos atuais: <b>${cur.map(t=>esc(t[0])).join(', ')||'nenhum'}</b></div><div>Anteriores: ${prev.map(esc).join(', ')||'—'}</div><div>Reinados: <b>${reigns}</b> • tempo como campeão: ${ev?ev+' evento(s)':'sem data registrada'}</div><div>🤝 Tag: ${tt.map(esc).join(', ')||'—'} • 🔥 Faction: ${fc.map(esc).join(', ')||'—'}</div></div><div class="card"><div>Record no jogo: <b>${w.w||0}V-${w.l||0}D</b></div><div>Nos eventos registrados: <b>${p.mm.length}</b> lutas • <b>${p.w}</b>V • <b>${p.l}</b>D • <b>${p.d}</b>E</div><div>Sequência: ${p.sw} vitória(s) seguida(s) • ${p.su} luta(s) sem perder${w.pop?' • pop '+w.pop:''}${w.mor?' • moral '+w.mor:''}</div></div><div class="sec">HISTÓRICO RECENTE</div>${p.mm.slice(-5).reverse().map(m=>`<div class="card" style="--c:${{w:'#3ddc84',l:'#b3261e',d:'#d4a017'}[sd(m,n)]}">${sd(m,n)==='w'?'✅ V':sd(m,n)==='l'?'❌ D':'➖ E'} vs ${opp(m,n).map(nm).join(', ')||'—'}<div class="mut">${esc(m.ev)} ${esc(m.championship||'')}</div></div>`).join('')||'<div class="mut">Sem lutas registradas.</div>'}<div class="sec">RIVALIDADES</div>${rv.map(([k,l])=>`<div class="lk" data-k="${esc(k)}" onclick="openG('rivalry',this.dataset.k)">⚔️ ${esc(k)}</div>`).join('')||'<div class="mut">Nenhuma.</div>'}<div class="sec">HEAD-TO-HEAD</div>${H.map(([o,h])=>`<div>vs ${nm(o)}: ${h.n} luta(s) • ${h.w}V ${h.l}D ${h.d}E</div>`).join('')||'<div class="mut">Sem histórico.</div>'}<div class="row" style="margin-top:10px"><select id="h2o"><option value="">Comparar com...</option>${Object.keys(S.roster).filter(x=>x!==n).sort().map(x=>`<option>${esc(x)}</option>`).join('')}</select><button class="btn" style="flex:0 0 auto" data-n="${esc(n)}" onclick="if($('#h2o').value)openH(this.dataset.n,$('#h2o').value)">⚔️ H2H</button></div><div class="row" style="margin-top:8px"><button class="btn s" data-n="${esc(n)}" onclick="openW(this.dataset.n)">📝 Notas</button><button class="btn s" data-n="${esc(n)}" onclick="editW(this.dataset.n)">✏️ Editar</button></div>`)}
+pv(`<h2 style="font-size:32px;color:${bc(w.brand)}">${esc(n)}${moodTag(n)}</h2><div class="mut">${esc(w.brand||'sem brand')} • ${esc(w.alignment||'—')} • ${esc(w.status||'—')}${w.susp?' • ⛔ suspenso: '+esc(w.susp):''}${w.inj?' • 🤕 '+esc(w.inj):''}</div>${moodLine(n)}<div class="card"><div>🏆 Títulos atuais: <b>${cur.map(t=>esc(t[0])).join(', ')||'nenhum'}</b></div><div>Anteriores: ${prev.map(esc).join(', ')||'—'}</div><div>Reinados: <b>${reigns}</b> • tempo como campeão: ${ev?ev+' evento(s)':'sem data registrada'}</div><div>🤝 Tag: ${tt.map(esc).join(', ')||'—'} • 🔥 Faction: ${fc.map(esc).join(', ')||'—'}</div></div><div class="card"><div>Record no jogo: <b>${w.w||0}V-${w.l||0}D</b></div><div>Nos eventos registrados: <b>${p.mm.length}</b> lutas • <b>${p.w}</b>V • <b>${p.l}</b>D • <b>${p.d}</b>E</div><div>Sequência: ${p.sw} vitória(s) seguida(s) • ${p.su} luta(s) sem perder${w.pop?' • pop '+w.pop:''}${w.mor?' • moral '+w.mor:''}</div></div><div class="sec">HISTÓRICO RECENTE</div>${p.mm.slice(-5).reverse().map(m=>`<div class="card" style="--c:${{w:'#3ddc84',l:'#b3261e',d:'#d4a017'}[sd(m,n)]}">${sd(m,n)==='w'?'✅ V':sd(m,n)==='l'?'❌ D':'➖ E'} ${(m.participants||[]).length>=3?'(multi) ':''}vs ${opp(m,n).map(nm).join(', ')||'—'}<div class="mut">${esc(m.ev)} ${esc(m.championship||'')}${(m.participants||[]).length>=3?' • '+(m.participants||[]).length+' lutadores':''}</div></div>`).join('')||'<div class="mut">Sem lutas registradas.</div>'}<div class="sec">RIVALIDADES</div>${rv.map(([k,l])=>`<div class="lk" data-k="${esc(k)}" onclick="openG('rivalry',this.dataset.k)">⚔️ ${esc(k)}</div>`).join('')||'<div class="mut">Nenhuma.</div>'}<div class="sec">HEAD-TO-HEAD</div>${H.map(([o,h])=>`<div>vs ${nm(o)}: ${h.n} luta(s) • ${h.w}V ${h.l}D ${h.d}E</div>`).join('')||'<div class="mut">Sem histórico.</div>'}<div class="row" style="margin-top:10px"><select id="h2o"><option value="">Comparar com...</option>${Object.keys(S.roster).filter(x=>x!==n).sort().map(x=>`<option>${esc(x)}</option>`).join('')}</select><button class="btn" style="flex:0 0 auto" data-n="${esc(n)}" onclick="if($('#h2o').value)openH(this.dataset.n,$('#h2o').value)">⚔️ H2H</button></div><div class="row" style="margin-top:8px"><button class="btn s" data-n="${esc(n)}" onclick="openW(this.dataset.n)">📝 Notas</button><button class="btn s" data-n="${esc(n)}" onclick="editW(this.dataset.n)">✏️ Editar</button></div>`)}
 function openH(a,b){const h=pst(a).H[b]||{n:0,w:0,l:0,d:0};pv(`<h2 style="font-size:30px">${nm(a)} vs ${nm(b)}</h2><div class="card"><div>Lutas: <b>${h.n}</b></div><div>${esc(a)} venceu: <b>${h.w}</b></div><div>${esc(b)} venceu: <b>${h.l}</b></div><div>Empates: <b>${h.d}</b></div></div>${h.n?'':'<div class="mut">Sem confrontos registrados.</div>'}${ML().filter(m=>sd(m,a)&&sd(m,b)&&sd(m,a)!==sd(m,b)||(sd(m,a)==='d'&&sd(m,b)==='d')).map(mline).join('')}`)}
 function vG(type,title,ic){const g=Object.entries(groups(type));return`<div class="sec">${ic} ${title}</div>${g.map(([k,l])=>gCard(type,k,l)).join('')||'<div class="mut">Nada registrado ainda.</div>'}`}
 function hl(){const out=[],st=[...new Set(ML().flatMap(m=>m.participants||[]))].map(n=>({n,...pst(n)}));st.filter(x=>x.sw>=3).sort((a,b)=>b.sw-a.sw).slice(0,2).forEach(x=>out.push(`📈 ${x.n.toUpperCase()} ESTÁ EM ${x.sw} VITÓRIAS CONSECUTIVAS`));st.filter(x=>x.su>=3&&x.su>x.sw).sort((a,b)=>b.su-a.su).slice(0,2).forEach(x=>out.push(`🔥 ${x.n.toUpperCase()} ESTÁ ${x.su} LUTAS SEM PERDER`));
@@ -1238,7 +1238,7 @@ vBrands=function(){
 const chatLast={},chatTimers={};
 function endChat(key,notify=false){chats[key]=[];delete chatLast[key];clearTimeout(chatTimers[key]);delete chatTimers[key];if(notify)toast('✕ Conversa encerrada. Pode começar outra.');if(['jj','hal','tony','dirk'].includes(key)&&tab===key)render();}
 function touchChat(key){chatLast[key]=Date.now();clearTimeout(chatTimers[key]);chatTimers[key]=setTimeout(()=>endChat(key,true),300000)}
-function continueChat(key){if(busy||privateSubmitLocks[key]||privateTurnLocks[key])return;privateSubmitLocks[key]=true;return Promise.resolve(ask(key,'Continue do último ponto da conversa, avançando sem repetir sua resposta anterior.')).finally(()=>{delete privateSubmitLocks[key]})}
+function continueChat(key){if(busy||privateSubmitLocks[key]||privateTurnLocks[key])return;const last=(chats[key]||[]).slice(-1)[0],tail=String((last&&last.t)||'').slice(-140).replace(/"/g,"'"),msg=(last&&last.cut)?'Sua última fala foi cortada no meio. Complete exatamente de onde parou (termine a frase e feche a ideia), sem recomeçar e sem repetir. Suas últimas palavras foram: "…'+tail+'"':'Continue do último ponto da conversa, avançando sem repetir sua resposta anterior. Fique só no assunto da sua última fala; não puxe lutador, rivalidade ou plano que não esteja nela.';privateSubmitLocks[key]=true;return Promise.resolve(ask(key,msg)).finally(()=>{delete privateSubmitLocks[key]})}
 function saveConv(key){const h=(chats[key]||[]).filter(x=>x.t&&!/^Erro:/.test(x.t));if(!h.length){toast('Nada para salvar ainda.');return}
  const first=h.find(x=>x.r==='u');const title=(first?first.t:'Conversa').slice(0,60);
  S.convs=S.convs||[];S.convs.unshift({key,title,date:new Date().toLocaleString('pt-BR'),msgs:h.map(x=>({r:x.r,t:x.t}))});persist();toast('💾 Conversa salva.');if(tab===key)render()}
@@ -1854,11 +1854,13 @@ function plwDirectionState(texts){
  }
  return state;
 }
+function plwIsFollowUp(t){const x=String(t||'').trim();if(!x)return false;if(/^(sua última fala|continue)/i.test(x))return true;if(resolveRosterMentions(x).length||plwTitlesInText(x).length)return false;return x.split(/\s+/).length<=12||/^(e |mas |então|entao|ok|fechou|sim|isso|aí |ai )/i.test(x)}
 function plwCarryNames(previousTexts,current){
+ if(!plwIsFollowUp(current))return[];
  if(plwTitlesInText(current).length)return[];
  if(resolveRosterMentions(current).length>=2||/\s+(?:x|vs\.?|contra)\s+/i.test(String(current||'')))return[];
  const seen=[];
- for(const text of[...(previousTexts||[])].reverse())for(const name of resolveRosterMentions(text)){const canonical=plwCanonicalName(name);if(!seen.includes(canonical))seen.push(canonical)}
+ for(const text of[...(previousTexts||[])].reverse().slice(0,1))for(const name of resolveRosterMentions(text)){const canonical=plwCanonicalName(name);if(!seen.includes(canonical))seen.push(canonical)}
  return seen.slice(0,3);
 }
 function plwTurnDirective(text,follower){
@@ -2598,11 +2600,11 @@ function roleLine(key){
  return key==='jj'?'Você é o booker principal: escolha clara e o porquê.'
   :key==='tony'?'Você é a Creative Room (2ª voz): uma IDEIA de futuro (ângulo, stip, promo, build); não feche o card sozinha.'
   :key==='gendo'?'Você é GENDO IKARI, segundo booker ousado: escolha inovadora (outro nome da lista OU o mesmo do J.J. com twist). Pode concordar com J.J. às vezes; não copie a fala dele.'
-  :key==='hal'?'Você é o Analista: SÓ analisa com UM número dos FATOS; não booke, não invente ângulo, não feche luta. Pode discordar com dado.'
+  :key==='hal'?'Você é o Analista: analise somente com fatos explicitamente fornecidos. Use números apenas quando estiverem nos FATOS; se não houver número relevante, faça uma observação qualitativa. Não booke nem invente histórico.'
   :'Responda na sua função.';
 }
 function taskFor(key,plan,round){
- const F=plan.F,role=roleLine(key),pend=F?'Pergunta pendente: contra quem '+F+' deve lutar. Trabalhe SOMENTE com os CANDIDATOS CALCULADOS (nome exato). '+(key==='jj'?'Escolha UM e diga por quê (momento, timing, o que cria).':key==='tony'?'Não feche o card: traga ângulo/stip/build em cima de '+(round.pick||'a discussão')+'.':key==='gendo'?'Como segundo booker: empurre o caminho do J.J. com twist ousado OU escolha OUTRO candidato da lista com lógica aventureira.':key==='hal'?'Só confira com UM número dos FATOS; não booke. Concorda ou discorda de '+(round.pick||'a sala')+' com dado.':'Fale do que '+(round.pick||'a escolha da sala')+' abre pra frente.'):'';
+ const F=plan.F,role=roleLine(key),pend=F?'Pergunta pendente: contra quem '+F+' deve lutar. Trabalhe SOMENTE com os CANDIDATOS CALCULADOS (nome exato). '+(key==='jj'?'Escolha UM e diga por quê (momento, timing, o que cria).':key==='tony'?'Não feche o card: traga ângulo/stip/build em cima de '+(round.pick||'a discussão')+'.':key==='gendo'?'Como segundo booker: empurre o caminho do J.J. com twist ousado OU escolha OUTRO candidato da lista com lógica aventureira.':key==='hal'?'Confira somente fatos explícitos. Use número apenas se estiver nos FATOS; se não houver, faça uma observação qualitativa. Não booke.':'Fale do que '+(round.pick||'a escolha da sala')+' abre pra frente.'):'';
  switch(plan.intent){
   case'opponent':return pend;
   case'correction':return'O head booker acabou de CORRIGIR/INFORMAR algo (está nos FATOS e na LOUSA). NÃO pare na confirmação: nesta mesma fala você DEVE continuar e responder a pergunta pendente. Nomes citados pelo head booker apenas para serem vetados ou dizer que já estão no card podem ser mencionados só na confirmação, NUNCA como escolha. '+(key==='jj'?'Aceite em meia frase e escolha UM NOVO candidato válido para '+F+'. ':key==='hal'?'Aceite a correção e então escolha OUTRO candidato válido, diferente do J.J., sustentando a escolha com UM dado do save. ':'Aceite a correção e então traga OUTRA solução para '+F+'; escolha um candidato válido ainda não citado nesta rodada ou proponha Triple Threat/Fatal 4-Way/título em jogo se isso fizer mais sentido. ')+pend+' '+role;
@@ -2626,6 +2628,7 @@ function buildPrompt(key,plan,m,message,round,extra){
   +'SUA TAREFA AGORA: '+taskFor(key,plan,round)+'\n'
   +'REGRA DE CONTINUIDADE: se o HEAD BOOKER acabou de corrigir um nome ou dizer que alguém já está no card, isso NÃO encerra a rodada. Você deve reconhecer rapidamente a correção e, no MESMO TEXTO, responder a pergunta que estava aberta com outro caminho válido. Nunca termine com pedido para ele perguntar de novo. NUNCA use como escolha um nome que o HEAD BOOKER acabou de marcar como vetado ou já escalado. Se o nome citado na correção aparece no histórico, trate-o como contexto de exclusão.\n'
   +(extra?extra+'\n':'')
+  +'REGRA FACTUAL OBRIGATÓRIA: JavaScript/save é a única fonte de fatos. Use somente informações explícitas em FATOS VERIFICADOS, CANDIDATOS CALCULADOS, LOUSA e na fala atual do head booker. Não calcule nem invente números, ratings, vitórias, derrotas, sequências, datas, confrontos, última luta, "nunca enfrentou", histórico de título ou duração de build. Não use memória do wrestling para completar lacunas. Se faltar dado, omita-o ou diga naturalmente que não está confirmado. Sugestões criativas são permitidas apenas como futuro hipotético. Toda sugestão de lutador deve usar somente candidatos válidos.\n'
   +'Responda somente como '+LBL[key]+', em 2 a 3 frases.';
 }
 /* ---------- conferência da fala gerada ---------- */
@@ -2698,7 +2701,7 @@ async function runV3(phase,userText){
    const gen=async extra=>{output='';await bookerSample(buildPrompt(key,voicePlan,meeting,message,round,extra),{engine:K.engine,system:bookerSystem(key)+SEC_RULES,maxTok:700,onText:c=>{if(meeting.runId!==token)return;output=removeRepeatedResponseText(c.text);message.text=output||'…';/* não renderizar durante streaming: evita apagar/recriar a fala */}});return output};
    let text=await gen('');
    let issues=checkText(text,voicePlan,key);
-   if(issues.length&&meeting.runId===token){message.text='…';text=await gen('CORREÇÃO OBRIGATÓRIA: '+issues.join(' ')+' Refaça mantendo sua função.');issues=checkText(text,voicePlan,key)}
+   if(issues.length&&meeting.runId===token){message.text='…';text=await gen('REJEIÇÃO FACTUAL: a resposta inteira foi descartada. '+issues.join(' ')+' Reescreva do zero usando apenas os fatos explicitamente fornecidos. Se faltar dado, omita-o. Mantenha sua função.');issues=checkText(text,voicePlan,key)}
    if(!issues.length){const clash=round.said.find(x=>plwSimilarity(text,x)>=0.6);if(clash&&meeting.runId===token){message.text='…';const t2=await gen('Sua resposta ficou parecida demais com outra já dita. Diga algo diferente, próprio da sua função. NÃO escolha um nome que outra voz já usou nesta rodada.');const i2=checkText(t2,voicePlan,key);if(!i2.length&&plwSimilarity(t2,clash)<0.6)text=t2;else{text='';issues=['repetida']}}}
    if(issues.length)text='';
    if(!text)text=fallbackText(key,voicePlan,meeting,round);
@@ -3347,10 +3350,10 @@ const _plwJowSystemPatch={};
         if(round?.pick && C(round.pick)===C(pick.name) && pick2){
           return 'Os números de '+pick.name+' são bons, mas eu olharia '+pick2.name+': '+pick2.plain+'. Menos óbvio e ainda sustenta o nível.';
         }
-        return 'Pelos números, '+pick.name+' faz sentido: '+pick.plain+'.';
+        return 'Minha leitura é que '+pick.name+' pode funcionar: '+pick.plain+'.';
       }
       // tony — ideia de construção
-      return 'Com '+pick.name+', eu construiria 3 semanas de tensão antes do PPV — um encontro no ringue, uma provocação e um confronto físico na semana do show. '+(pick2?'Se a sala quiser alternativa, '+pick2.name+' abre um ângulo mais técnico.':'');
+      return 'Com '+pick.name+', eu construiria tensão em etapas: primeiro um motivo claro para se cruzarem, depois uma interação que aumente o conflito e, por fim, uma consequência concreta no PPV. '+(pick2?'Como alternativa, '+pick2.name+' permite uma abordagem diferente.':'');
     }
     if(_origFallback) try{return _origFallback(key,plan,m,round)}catch(e){}
     return key==='jj'?'Me dá um nome ou uma direção que eu monto o caminho.':key==='hal'?'Sem dado novo no save pra isso; cita o nome que eu confiro.':'Me fala o eixo e eu levanto o que abre.';
@@ -3359,7 +3362,7 @@ const _plwJowSystemPatch={};
   /* ---- prompts: 3 pessoas diferentes, podem discordar ---- */
   const PERSONA_EDGE={
     jj:'Você é J.J. Purple, booker parceiro. Tem opinião própria e NÃO precisa agradar. Se a ideia do head booker for fraca, diga e proponha outra. Escolha UM nome da lista de candidatos ativos e defenda com timing/momentum/proteção. Se outro já escolheu o mesmo, você pode manter OU trocar se tiver motivo real — não copie a justificativa.',
-    hal:'Você é o Analista. Sua lealdade é aos números do SAVE, não ao consenso da sala. Se os dados sustentam a escolha do J.J., diga que concorda e acrescente UM número concreto. Se os dados apontam outro candidato da lista, DEFENDA o outro com o número — discordo é saudável. Nunca invente nota. Nunca proponha segmento/promo.',
+    hal:'Você é o Analista. Sua lealdade é aos fatos do SAVE, não ao consenso da sala. Use números SOMENTE quando estiverem explicitamente nos FATOS ou CANDIDATOS CALCULADOS. Se não houver número relevante, faça uma observação qualitativa natural. Nunca invente nota, vitória, derrota, sequência, data, confronto ou histórico. Nunca proponha segmento/promo.',
     tony:'Você é a Creative Room. Pensa em ângulo, estipulação e o que a luta ABRE nas próximas semanas. Pode concordar com um nome e desenvolver a história, OU discordar e oferecer estrutura diferente (Triple Threat, título em jogo, stip). Uma ideia só, concreta. Não repita a fala do J.J. nem do Analista.'
   };
 
@@ -4215,9 +4218,9 @@ Regras:
 
     if(d.mode==='pick' && (d.shortlist||[]).length){
       const list = d.shortlist.filter(n=>!d.rejected.some(r=>C(r.name)===C(n)));
-      if(key==='jj') return 'O head booker pediu o FAVORITO entre: '+list.join(', ')+'. Escolha UM e diga por quê (3 semanas de build, empresa nova de 4 meses = payoff claro).';
-      if(key==='gendo') return 'Entre '+list.join(', ')+', escolha UM (pode discordar do J.J.) com lógica ousada de 3 semanas.';
-      if(key==='tony') return 'Sobre o favorito da mesa, monte o build de 3 shows até o PPV — sem inventar passado.';
+      if(key==='jj') return 'O head booker pediu o FAVORITO entre: '+list.join(', ')+'. Escolha UM e explique usando opinião de booking, timing, proteção ou encaixe. Não invente histórico nem duração de build.';
+      if(key==='gendo') return 'Entre '+list.join(', ')+', escolha UM (pode discordar do J.J.) e explique uma lógica criativa sem inventar cronograma ou passado.';
+      if(key==='tony') return 'Sobre o favorito da mesa, proponha uma construção até o PPV, sem presumir quantos shows faltam e sem inventar passado.';
       if(key==='hal') return 'Compare os da shortlist só com números/históricos dos FATOS. Sem fechar luta.';
     }
 
@@ -4230,7 +4233,7 @@ Regras:
     const pick = (round&&round.pick)||'';
     if(key==='jj') return 'Escolha UM válido'+(F?' para '+F:'')+': '+(valid.slice(0,8).join(', ')||'—')+'. Uma frase de timing.';
     if(key==='gendo') return (pick?'J.J. foi de '+pick+'. ':'')+'Concorde com twist OU outro nome: '+(valid.filter(n=>C(n)!==C(pick)).slice(0,6).join(', ')||'—')+'.';
-    if(key==='tony') return 'Ângulo/stip/build de 2–3 semanas em cima de '+(pick||'a discussão')+'. Não feche card.';
+    if(key==='tony') return 'Proponha um ângulo, estipulação ou construção para '+(pick||'a discussão')+'. Não presuma duração nem feche card.';
     if(key==='hal') return 'Só um dado dos FATOS'+(pick?' sobre '+pick:'')+'. Não booke.';
     return 'Sua função.';
   }
@@ -4375,7 +4378,7 @@ Regras:
         try{ if(typeof window.checkText==='function') issues=window.checkText(text,plan,key)||[]; }catch(e){}
         if(issues.length && meeting.runId===token){
           message.text='…';
-          text = await gen('CORREÇÃO: '+issues.join(' ')+' Responda a pergunta atual com nomes concretos se for multi-man.');
+          text = await gen('A resposta inteira foi rejeitada por possível fato sem suporte. '+issues.join(' ')+' Reescreva do zero apenas com fatos explícitos; se faltar dado, omita-o. Responda a pergunta atual.');
           try{ issues=window.checkText(text,plan,key)||[]; }catch(e){ issues=[]; }
         }
         text = scrubLeak(text);
@@ -4383,14 +4386,14 @@ Regras:
           const valid = (plan.cands||[]).map(c=>c.name);
           const a=valid[0], b=valid[1], c3=valid[2];
           if(d.mode==='multi'){
-            if(key==='jj'||key==='gendo') text = 'Além do confirmado, eu colocaria '+[a,b,c3].filter(Boolean).join(', ')+' na F4W do PLWAR.';
-            else if(key==='tony') text = 'Build: cada um ganha um momento em 1 dos 3 shows — ataque, promo ou luta classificatória — e colidem na F4W.';
+            if(key==='jj'||key==='gendo') text = 'Como opções para completar a F4W, eu consideraria '+[a,b,c3].filter(Boolean).join(', ')+', desde que a lousa ainda deixe essas vagas abertas.';
+            else if(key==='tony') text = 'Eu daria a cada participante um caminho distinto de entrada — uma vitória, uma declaração ou uma decisão de autoridade — sem precisar repetir o mesmo segmento para todos.';
             else text = 'Os três estão livres na PLWAR no que o card mostra agora.';
           } else {
             if(key==='jj') text = a?('Eu iria de '+a+'.'):'Lista apertada.';
             else if(key==='gendo') text = b?('Eu arriscaria '+b+'.'):(a?('Compro '+a+' com twist.'):'Mudo a estrutura.');
-            else if(key==='tony') text = 'Build curto: encontro, provocação, choque no PPV.';
-            else text = a?('Pelos números, '+a+' é o que o save sustenta.'):'Sem dado novo.';
+            else if(key==='tony') text = 'Eu faria uma escalada simples: interação com motivo, tensão crescente e uma consequência no PPV.';
+            else text = a?('Eu consideraria '+a+' como caminho, sem atribuir a ele um histórico que não esteja confirmado.'):'Sem dado novo.';
           }
         }
         if(typeof finalizeText==='function'){
@@ -5305,6 +5308,21 @@ Regras:
   let base=[];
   try{base=_check.apply(this,arguments)||[]}catch(e){}
   try{const a=audit(arguments[0]);if(a.dropped.length)base=base.concat(['Reescreva sem: '+a.dropped.map(d=>d.why).join('; ')+'. Use só lutadores do ELENCO VÁLIDO e fatos do SAVE CANON.'])}catch(e){}
+  // Segunda barreira factual: números não presentes no contexto são rejeitados.
+  try{
+   const answer=String(arguments[0]||''), plan=window.__mtgPlan||{};
+   const source=[plan.factsTxt||'',plan.candTxt||'',plan.board||'',plan.text||''].join(' ');
+   const canonNum=v=>String(v).replace(',','.');
+   const known=new Set((source.match(/\d+(?:[.,]\d+)?/g)||[]).map(canonNum));
+   const unsupported=[...new Set((answer.match(/\d+(?:[.,]\d+)?/g)||[]).map(canonNum).filter(v=>!known.has(v)))];
+   if(unsupported.length)base.push('Número sem suporte factual: '+unsupported.join(', ')+'. Remova os números e reescreva a resposta inteira.');
+   if(/\b(?:nunca\s+(?:se\s+)?enfrentou|ultima luta|última luta|sequencia de vitorias|sequência de vitórias|venceu|derrotou|perdeu para|foi derrotado por|defendeu o titulo|defendeu o título)\b/i.test(answer)){
+    const history=String(plan.factsTxt||'')+' '+String(plan.candTxt||'');
+    const claims=['nunca','última luta','ultima luta','sequência de vitórias','sequencia de vitorias','venceu','derrotou','perdeu para','foi derrotado por','defendeu o título','defendeu o titulo'];
+    const claim=claims.find(v=>answer.toLowerCase().includes(v));
+    if(claim&&!history.toLowerCase().includes(claim))base.push('Alegação histórica sem suporte explícito nos FATOS. Retire-a e reescreva a resposta inteira.');
+   }
+  }catch(e){}
   return base;
  };
 
@@ -5321,5 +5339,3315 @@ Regras:
 
  console.log('[PLW] MTG CANON GUARD ativo — SAVE CANON no prompt + auditoria de nomes/fatos');
  }catch(e){console.error('[PLW] MTG CANON GUARD falhou ao iniciar (reunião segue como antes):',e)}
+})();
+</script>
+
+<script>
+/* ===== PLW V34 — REUNIÃO ISOLADA / SAVE-ONLY =====
+   Correção cirúrgica:
+   - NÃO altera ask(), chats privados, bookerSystem() ou as abas J.J./Analista.
+   - Substitui apenas o runner da REUNIÃO.
+   - A reunião recebe explicitamente o SAVE do Journey of Wrestling.
+   - Conhecimento do mundo real NÃO é fonte de fatos.
+   - Cada voz mantém função própria.
+*/
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V34__) return;
+  window.__PLW_MTG_V34__ = true;
+
+  const C = n => typeof plwCanonicalName==='function'
+    ? plwCanonicalName(String(n||''))
+    : String(n||'').trim();
+
+  const F = t => typeof plwFold==='function'
+    ? plwFold(String(t||''))
+    : String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+  const esc0 = s => String(s==null?'':s);
+
+  function rosterText(){
+    const groups = {};
+    Object.keys(S.roster||{}).forEach(n=>{
+      const w=S.roster[n]||{};
+      const b=w.brand||'SEM BRAND';
+      (groups[b]=groups[b]||[]).push(
+        C(n)+' — '+b+' — '+(w.w||0)+'V-'+(w.l||0)+'D'+
+        (w.status && w.status!=='ativo'?' — '+w.status:'')+
+        (w.inj?' — lesão: '+w.inj:'')
+      );
+    });
+    return Object.keys(groups).map(b=>b+': '+groups[b].join('; ')).join('\n') || '(roster vazio)';
+  }
+
+  function saveOnlyContext(meeting, plan, d){
+    let full='';
+    try{
+      if(typeof buildMeetingContext==='function') full=String(buildMeetingContext()||'');
+    }catch(e){}
+    if(!full){
+      try{
+        if(typeof digest==='function') full=String(digest()||'');
+      }catch(e){}
+    }
+
+    const events=(S.events||[]).slice(-12).map(e=>{
+      const ms=(e.matches||[]).map(m=>
+        (m.participants||[]).join(' vs ')+' → '+(m.winner||'EMPATE')+
+        (m.championship?' | '+m.championship+(m.title_change?' | MUDOU':''):'')+
+        (m.rating!=null?' | '+m.rating+'★':'')+
+        (m.notes?' | '+m.notes:'')
+      ).join(' ;; ');
+      return '['+(e.type==='ppv'?'PPV':'SHOW')+'] '+e.name+' '+(e.date||'')+
+        ' | brand: '+(e.brand||'')+' | '+ms;
+    }).join('\n');
+
+    const stories=(S.stories||[]).slice(-30).map(s=>
+      '['+s.type+'] '+(s.names||[]).join(' x ')+': '+(s.text||'')+
+      (s.event?' | '+s.event:'')
+    ).join('\n');
+
+    const titles=(typeof TITLES!=='undefined'?TITLES:[]).map(t=>
+      t[0]+' → '+(((S.titles[t[0]]||{}).champ)||'VAGO')+
+      ' | brand: '+t[1]
+    ).join('\n');
+
+    const locked=(d.lockedMatches||[]).map(x=>
+      (x.names||[]).join(' x ')+(x.event?' @ '+x.event:'')
+    ).join(' | ') || 'nenhuma';
+
+    const rejected=(d.rejected||[]).map(x=>x.name).join(', ') || 'nenhum';
+
+    return [
+      '=== UNIVERSO ===',
+      'Purple League Wrestling (PLW), SAVE do jogo Journey of Wrestling.',
+      'ESTA É UMA LIGA/EMPRESA FICTÍCIA DO SAVE. NÃO USE WWE, AEW, NJPW OU QUALQUER HISTÓRICO DO MUNDO REAL.',
+      '',
+      '=== ROSTER VÁLIDO — ÚNICOS LUTADORES QUE EXISTEM ===',
+      rosterText(),
+      '',
+      '=== CAMPEÕES REGISTRADOS ===',
+      titles||'nenhum',
+      '',
+      '=== FATOS RECENTES DO SAVE ===',
+      events||'nenhum',
+      '',
+      '=== STORYLINES REGISTRADAS ===',
+      stories||'nenhuma',
+      '',
+      '=== FATOS CALCULADOS PARA ESTA PERGUNTA ===',
+      String(plan&&plan.factsTxt||'')||'nenhum',
+      '',
+      '=== CANDIDATOS VÁLIDOS CALCULADOS ===',
+      String(plan&&plan.candTxt||'')||'nenhum',
+      '',
+      '=== LOUSA / PLANEJAMENTO DO HEAD BOOKER ===',
+      String(plan&&plan.board||'')||'nenhuma',
+      '',
+      '=== ESTADO DA REUNIÃO ===',
+      'Modo: '+(d.mode||'discuss'),
+      'Focal: '+(d.focal||'—'),
+      'Lutas fechadas: '+locked,
+      'Rejeitados: '+rejected,
+      'Pergunta atual: '+String(d.lastUser||plan&&plan.text||'').slice(0,500),
+      '',
+      '=== CONTEXTO BRUTO DO SAVE, SE DISPONÍVEL ===',
+      full.slice(0,9000)
+    ].join('\n').slice(0,30000);
+  }
+
+  function persona(key){
+    if(key==='jj') return [
+      'Você é J.J. Purple, booker parceiro da PLW.',
+      'Você está DENTRO de uma reunião com o head booker.',
+      'Fale informalmente, natural e diretamente.',
+      'Tenha opinião própria: pode concordar ou discordar.',
+      'Pense em timing, momentum, proteção, construção e consequência.',
+      'Ao sugerir lutadores, use SOMENTE nomes do ROSTER VÁLIDO/CANDIDATOS.',
+      'Não invente histórico para justificar sua ideia.'
+    ].join('\n');
+
+    if(key==='tony') return [
+      'Você é a CREATIVE ROOM da PLW, dentro da reunião.',
+      'Você pensa no FUTURO: ângulo, construção, estipulação, consequência e direção.',
+      'Pode ser criativo, mas só pode usar lutadores que existem no ROSTER VÁLIDO.',
+      'Não transforme uma ideia futura em fato passado.',
+      'Não invente resultados, rivalidades ou histórico.'
+    ].join('\n');
+
+    if(key==='gendo') return [
+      'Você é GENDO IKARI, segundo booker da reunião da PLW.',
+      'Você é ousado e procura caminhos alternativos.',
+      'Pode discordar de J.J. e da Creative.',
+      'Pode sugerir outro nome ou outra estrutura, mas SOMENTE usando o ROSTER/CANDIDATOS do SAVE.',
+      'Nunca invente passado, vitória, derrota, rating, rivalidade ou confronto.'
+    ].join('\n');
+
+    return [
+      'Você é o ANALISTA da reunião da PLW.',
+      'Você é a voz dos números e registros do SAVE.',
+      'Use SOMENTE números/resultados escritos nos FATOS DO SAVE acima.',
+      'Se um número ou histórico não estiver escrito no SAVE, NÃO invente.',
+      'Você pode discordar do booking usando um dado concreto.',
+      'Você NÃO cria segmento, ataque, promo, twist ou estipulação como decisão de booking.',
+      'Se não houver dado suficiente, diga naturalmente que não há dado suficiente no save.'
+    ].join('\n');
+  }
+
+  function meetingHistory(m, current){
+    return (m.messages||[])
+      .filter(x=>x!==current && x.text && x.text!=='…' &&
+        (x.role==='user'||x.role==='persona'))
+      .slice(-10)
+      .map(x=>
+        (x.role==='user'?'HEAD BOOKER':({
+          jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA'
+        }[x.persona]||'VOZ'))+': '+String(x.text).slice(0,700)
+      ).join('\n');
+  }
+
+  function activeCandidates(plan,d){
+    const rejected=new Set((d.rejected||[]).map(x=>C(x.name)));
+    return (plan&&plan.cands||[])
+      .map(x=>x&&x.name)
+      .filter(Boolean)
+      .filter(n=>!rejected.has(C(n)));
+  }
+
+  function meetingPrompt(key,plan,m,message,d,round){
+    const cands=activeCandidates(plan,d);
+    const candidateBlock=cands.length
+      ? cands.map((n,i)=>`${i+1}) ${n}`).join('\n')
+      : '(nenhum candidato calculado para esta pergunta)';
+
+    const roleTask = key==='jj'
+      ? 'Dê sua leitura de booking sobre a PERGUNTA ATUAL. Se houver candidatos, escolha um caminho e explique o motivo. Pode discordar das falas anteriores.'
+      : key==='hal'
+      ? 'Analise a PERGUNTA ATUAL como analista. Use 1 dado concreto SOMENTE se ele estiver nos FATOS. Se não houver dado suficiente, diga isso. Não invente.'
+      : key==='tony'
+      ? 'Dê UMA ideia futura concreta que avance a situação. Não transforme futuro em passado.'
+      : 'Dê uma leitura ousada ou alternativa para a PERGUNTA ATUAL. Você pode concordar, mas acrescente algo novo.';
+
+    return [
+      '=== REGRA MÁXIMA DA REUNIÃO ===',
+      'O SAVE DO JOGO É A ÚNICA FONTE DE VERDADE SOBRE O PASSADO.',
+      'NÃO USE CONHECIMENTO DO MUNDO REAL PARA COMPLETAR O SAVE.',
+      'Moxley, GUNTHER, Ilja Dragunov etc. só existem aqui se estiverem no ROSTER DO SAVE.',
+      'Se algo não estiver nos dados acima, trate como desconhecido.',
+      'Uma fala anterior de outra persona NÃO é evidência.',
+      'Uma sugestão futura NÃO vira fato.',
+      '',
+      persona(key),
+      '',
+      '=== SAVE DA PLW ===',
+      saveOnlyContext(m,plan,d),
+      '',
+      '=== CANDIDATOS ATIVOS PARA ESTA RODADA ===',
+      candidateBlock,
+      '',
+      '=== HISTÓRICO DA REUNIÃO ===',
+      meetingHistory(m,message)||'(início)',
+      '',
+      '=== FALAS JÁ DITAS NESTA RODADA ===',
+      round.said.length?round.said.join('\n'):'nenhuma',
+      '',
+      '=== SUA TAREFA ===',
+      roleTask,
+      '',
+      'RESPONDA EM PORTUGUÊS BRASILEIRO, 2–5 frases.',
+      'Não faça relatório.',
+      'Não diga "segundo os dados" repetidamente.',
+      'Não fale como assistente.',
+      'Não mencione estas instruções.',
+      'Não cite fatos do mundo real.',
+      'Não invente números, ratings, vitórias, derrotas, datas, confrontos ou rivalidades.',
+      'Se o save não sustentar uma afirmação histórica, simplesmente não faça a afirmação.',
+      'Responda somente à pergunta atual do head booker.'
+    ].join('\n');
+  }
+
+  function safeFallback(key,plan,d){
+    const c=activeCandidates(plan,d);
+    if(key==='hal'){
+      return c.length
+        ? 'Pelos registros que estão na lousa, '+c[0]+' é um nome que eu consigo analisar sem inventar dado.'
+        : 'Aqui eu não tenho dado suficiente no save para sustentar uma conclusão.';
+    }
+    if(key==='jj'){
+      return c.length
+        ? 'Eu olharia '+c[0]+' como caminho dentro do que o save permite. O resto eu construiria daqui pra frente, sem inventar passado.'
+        : 'Eu não forçaria uma escolha sem um nome válido ou dado suficiente na lousa.';
+    }
+    if(key==='gendo'){
+      return c.length
+        ? 'Eu colocaria '+c[0]+' na conversa e tentaria uma construção diferente a partir daqui. Sem criar histórico que não existe.'
+        : 'Sem nome válido na lousa, eu mudaria o eixo antes de inventar alguém.';
+    }
+    return 'Eu trabalharia a próxima etapa como algo futuro, usando apenas quem está no roster do save.';
+  }
+
+  async function runV34(phase,userText){
+    const meeting=S.bookingMeeting;
+    if(!meeting) return;
+    if(busy) return toast('Espere as vozes terminarem.');
+
+    const raw=String(userText||'').trim();
+    if(raw && typeof absorbUser==='function'){
+      try{ absorbUser(meeting,raw); }catch(e){}
+    }
+
+    const d=typeof debate==='function'
+      ? debate(meeting)
+      : {mode:'discuss',rejected:[],lockedMatches:[],liked:[],lastUser:raw};
+
+    busy=true;
+    window.__mtgRunning=true;
+    const token=meeting.runId=String(Date.now())+':v34';
+    const keys=['jj','tony','gendo','hal'];
+    const round={said:[],pick:(d.liked&&d.liked[0])||''};
+
+    try{
+      let plan=null;
+      try{
+        plan=typeof window.buildPlan==='function'
+          ? window.buildPlan(meeting,raw||d.lastUser||'')
+          : (typeof buildPlan==='function'?buildPlan(meeting,raw||d.lastUser||''):null);
+      }catch(e){
+        console.warn('[PLW V34] buildPlan:',e);
+      }
+
+      if(!plan){
+        plan={
+          text:raw||d.lastUser||'',
+          F:d.focal||'',
+          cands:[],
+          intent:'discuss',
+          factsTxt:'',
+          candTxt:'',
+          board:''
+        };
+      }
+
+      const rej=new Set((d.rejected||[]).map(x=>C(x.name)));
+      plan.cands=(plan.cands||[]).filter(x=>x&&x.name&&!rej.has(C(x.name)));
+
+      if(d.mode==='multi' && typeof multiCandidates==='function'){
+        try{
+          const mc=multiCandidates(meeting,d,'PLWAR')||[];
+          plan.cands=mc.map(n=>({name:n,reason:n+' ['+(typeof brandOf==='function'?brandOf(n):'?')+']'}));
+          plan.candTxt='CANDIDATOS F4W/PLWAR:\n'+plan.cands.map((x,i)=>(i+1)+') '+x.name).join('\n');
+        }catch(e){}
+      }
+
+      window.__mtgPlan=plan;
+
+      for(const key of keys){
+        if(S.bookingMeeting!==meeting || meeting.runId!==token) break;
+
+        const message={
+          role:'persona',
+          persona:key,
+          text:'…',
+          id:Date.now()+meeting.messages.length
+        };
+        meeting.messages.push(message);
+        persist();
+        if(tab==='meeting') render();
+
+        let output='';
+        const prompt=meetingPrompt(key,plan,meeting,message,d,round);
+        const sys=persona(key)+
+          '\n\nIMPORTANTE: isto é o SAVE do Journey of Wrestling. '+
+          'Ignore conhecimento externo e não use wrestling real como fonte factual.';
+
+        try{
+          await bookerSample(prompt,{
+            engine:K.engine,
+            system:sys,
+            maxTok:key==='hal'?520:720,
+            onText:c=>{
+              if(meeting.runId!==token) return;
+              output=typeof removeRepeatedResponseText==='function'
+                ? removeRepeatedResponseText(c.text)
+                : String(c.text||'');
+              message.text=output||'…';
+            }
+          });
+        }catch(e){
+          output='';
+          console.warn('[PLW V34] '+key+':',e);
+        }
+
+        /* Auditoria final: se a resposta tentar importar fato externo,
+           refaz uma única vez dentro do mesmo universo. */
+        let auditBad=[];
+        try{
+          if(typeof window.__mtgAudit==='function'){
+            auditBad=(window.__mtgAudit(output)||{}).dropped||[];
+          }
+        }catch(e){}
+
+        if(auditBad.length && meeting.runId===token){
+          output='';
+          const retryPrompt=prompt+
+            '\n\nREJEIÇÃO DA PRIMEIRA RESPOSTA: ela tentou afirmar algo que não está sustentado pelo SAVE.'+
+            '\nREFAÇA A RESPOSTA INTEIRA.'+
+            '\nNão cite a rejeição.'+
+            '\nUse apenas os fatos explícitos acima.'+
+            '\nSe não houver fato suficiente, responda sem inventar.'+
+            '\nNão use nenhum conhecimento do mundo real.';
+
+          try{
+            await bookerSample(retryPrompt,{
+              engine:K.engine,
+              system:sys+'\nNÃO invente fatos históricos.',
+              maxTok:key==='hal'?520:720,
+              onText:c=>{
+                if(meeting.runId!==token)return;
+                output=typeof removeRepeatedResponseText==='function'
+                  ? removeRepeatedResponseText(c.text)
+                  : String(c.text||'');
+                message.text=output||'…';
+              }
+            });
+          }catch(e){}
+        }
+
+        if(!output.trim()) output=safeFallback(key,plan,d);
+
+        /* finalizeText continua sendo o último filtro da reunião.
+           Não chamamos a versão privada de ask(). */
+        try{
+          const fin=typeof finalizeText==='function'
+            ? finalizeText(output)
+            : {shown:output,rest:''};
+          message.text=fin.shown||output;
+          message.rest=fin.rest||'';
+          message.cut=!!fin.rest;
+        }catch(e){
+          message.text=output;
+        }
+
+        /* Só registra a proposta depois da fala final. */
+        try{
+          if(typeof recordProposal==='function') recordProposal(d,message.text);
+        }catch(e){}
+
+        if((key==='jj'||key==='gendo') && plan.cands&&plan.cands.length){
+          const hit=plan.cands.find(c=>F(message.text).includes(F(c.name)));
+          if(hit) round.pick=hit.name;
+        }
+
+        round.said.push(
+          ({jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA'}[key]||key)+
+          ': '+message.text
+        );
+
+        persist();
+        if(tab==='meeting') render();
+      }
+
+      try{
+        if(typeof meetingTrackPersonaIdeas==='function') meetingTrackPersonaIdeas(meeting);
+      }catch(e){}
+    }catch(err){
+      meeting.messages=(meeting.messages||[]).filter(x=>
+        !(x.role==='persona'&&x.text==='…')
+      );
+      meeting.messages.push({
+        role:'system',
+        text:'Erro na reunião: '+(err.message||err.code||err)
+      });
+    }finally{
+      busy=false;
+      window.__mtgRunning=false;
+      persist();
+      if(tab==='meeting') render();
+    }
+  }
+
+  window.meetingRunPanel=runV34;
+  console.log('[PLW] V34 — reunião isolada: SAVE ONLY / JOW / sem mundo real; chats privados intactos');
+})();
+</script>
+
+
+<script>
+/* ===== PLW V35 — REUNIÃO HUMANA / BOOKERS DE VERDADE =====
+   Só substitui meetingRunPanel.
+   Objetivo: manter SAVE ONLY, mas parar o comportamento "quatro relatórios dizendo não há dados".
+   A reunião é FUTURO DE BOOKING: o save serve para saber o que já aconteceu; a mesa decide o que
+   pode ser construído daqui para frente. Chats privados não são tocados.
+*/
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V35__) return;
+  window.__PLW_MTG_V35__=true;
+
+  const C=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+  const F=n=>typeof plwFold==='function'?plwFold(String(n||'')):String(n||'').toLowerCase();
+  const uniq=a=>[...new Set(a.filter(Boolean).map(C))];
+
+  function lastUser(m){
+    return (m.messages||[]).filter(x=>x.role==='user').slice(-1)[0]?.text||'';
+  }
+
+  function canonicalRoster(){
+    return Object.keys(S.roster||{}).map(C).filter(Boolean);
+  }
+
+  function findRoster(name){
+    const k=Object.keys(S.roster||{}).find(n=>C(n)===C(name));
+    return k?S.roster[k]:null;
+  }
+
+  function matchRows(){
+    try{
+      if(typeof ML==='function') return ML().filter(Boolean);
+    }catch(e){}
+    const out=[];
+    (S.events||[]).forEach(e=>(e.matches||[]).forEach(x=>out.push({...x,ev:e.name,date:e.date})));
+    return out;
+  }
+
+  function sides(v){
+    try{return typeof plwSides==='function'?plwSides(v).map(C):String(v||'').split(/\s+(?:and|e|,)\s+/i).map(C).filter(Boolean)}
+    catch(e){return String(v||'').split(/\s+(?:and|e|,)\s+/i).map(C).filter(Boolean)}
+  }
+
+  function statsFor(name){
+    const n=C(name), ms=matchRows().filter(m=>(m.participants||[]).some(p=>C(p)===n));
+    let w=0,l=0,r=[];
+    for(const m of ms){
+      const win=sides(m.winner),los=sides(m.loser);
+      if(win.includes(n))w++;
+      else if(los.includes(n))l++;
+      if(m.rating!=null && Number.isFinite(+m.rating)) r.push(+m.rating);
+    }
+    const recent=ms.slice(-5);
+    const recentLine=recent.map(m=>{
+      const win=sides(m.winner).includes(n), loss=sides(m.loser).includes(n);
+      return (win?'V':loss?'D':'participou')+' '+(m.ev||'evento')+(m.rating!=null?' ('+m.rating+'★)':'');
+    }).join(' | ');
+    return {w,l,ms,r,avg:r.length?(r.reduce((a,b)=>a+b,0)/r.length).toFixed(2):'—',recentLine};
+  }
+
+  function candidatePool(meeting, latest){
+    const blocked=new Set();
+    try{
+      const d=typeof debate==='function'?debate(meeting):{};
+      (d.rejected||[]).forEach(x=>blocked.add(C(x.name)));
+      (d.disliked||[]).forEach(x=>blocked.add(C(x)));
+    }catch(e){}
+    const txt=F(latest);
+    /* Rejeições naturais do head booker continuam valendo na rodada seguinte. */
+    const previous=(meeting.messages||[]).filter(x=>x.role==='user').slice(-8).map(x=>String(x.text||''));
+    const rejectionText=previous.join(' ');
+    const names=canonicalRoster();
+    const focal=[];
+    const champNames=Object.values(S.titles||{}).map(x=>C(x?.champ)).filter(Boolean);
+    const mentioned=names.filter(n=>txt.includes(F(n)));
+    mentioned.forEach(n=>{if(champNames.includes(n))focal.push(n)});
+    /* O campeão citado na pergunta nunca pode ser "o destronador". */
+    const championNames=new Set([...champNames,...focal]);
+    const rows=names.filter(n=>!championNames.has(n)&&!blocked.has(n)).map(n=>{
+      const w=findRoster(n)||{}, st=statsFor(n);
+      return {name:n,brand:w.brand||'brand não registrada',pop:w.pop??w.popularity??0,wins:st.w,losses:st.l,avg:st.avg,recent:st.recentLine,ms:st.ms.length};
+    });
+    /* Se o head booker explicitamente excluiu um nome, não o reintroduza. */
+    const excluded=rows.filter(x=>new RegExp('\\b(?:sem|nao|não|fora)\\s+'+x.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(rejectionText));
+    const ex=new Set(excluded.map(x=>C(x.name)));
+    return rows.filter(x=>!ex.has(C(x.name)))
+      .sort((a,b)=>(b.ms-a.ms)||(b.wins-b.losses-a.wins+a.losses)||(b.pop-a.pop))
+      .slice(0,24);
+  }
+
+  function saveContext(meeting, latest){
+    const pool=candidatePool(meeting,latest);
+    const championLines=[];
+    Object.keys(S.titles||{}).forEach(t=>{
+      const z=S.titles[t]||{};
+      if(z.champ) championLines.push(t+' → '+C(z.champ));
+    });
+    const focus=championLines.filter(x=>/world championship/i.test(x)).join(' | ')||championLines.slice(0,3).join(' | ');
+    const recent=matchRows().slice(-12).map(m=>{
+      const p=(m.participants||[]).map(C).join(' vs ');
+      return (m.ev||'evento')+': '+p+' → '+(m.winner||'resultado não informado')+(m.championship?' | '+m.championship:'')+(m.rating!=null?' | '+m.rating+'★':'');
+    });
+    return [
+      'CANON: só o save define o PASSADO. Não use wrestling real ou memória externa.',
+      'BOOKING: a pergunta é sobre o FUTURO. Não exija que o desafiante já tenha lutado pelo título; a mesa pode escolher alguém do roster e construir essa história agora.',
+      'CAMPEÕES ATUAIS: '+(championLines.join(' ; ')||'não informado'),
+      'CANDIDATOS VIVOS PARA ESTA PERGUNTA (todos existem no roster; não são fatos de que merecem o título):',
+      pool.map((x,i)=>`${i+1}. ${x.name} | brand ${x.brand} | ${x.wins}V-${x.losses}D | ${x.ms} lutas registradas | média ${x.avg}★ | recentes: ${x.recent||'sem registro recente'}`).join('\n'),
+      'RESULTADOS RECENTES DO SAVE (somente fatos):',
+      recent.join('\n')||'sem resultados recentes',
+      'REGRA DE EMPRESA: a PLW tem poucos meses. Poucos dados NÃO são um bloqueio; isso significa que a função dos bookers é decidir quais histórias criar e quais dados produzir nas próximas semanas.'
+    ].join('\n');
+  }
+
+  function previousRound(meeting){
+    const msgs=(meeting.messages||[]);
+    const lastU=msgs.map(x=>x.role).lastIndexOf('user');
+    return msgs.slice(lastU+1).filter(x=>x.role==='persona'&&x.text&&x.text!=='…')
+      .map(x=>`${x.persona||'persona'}: ${x.text}`).join('\n');
+  }
+
+  function humanSystem(key){
+    const base=[
+      'Você está numa REUNIÃO REAL DE BOOKING da Purple League Wrestling (PLW), dentro do jogo Journey of Wrestling.',
+      'Fale como uma pessoa sentada na sala discutindo booking, não como um relatório, chatbot ou auditor.',
+      'O SAVE é a única fonte de verdade sobre o passado. Nunca invente luta, vitória, derrota, rivalidade, reinado, rating, data ou estatística.',
+      'Mas isto é uma reunião de BOOKING: quando a pergunta for sobre o que devemos fazer daqui para frente, você DEVE opinar e propor construção. Falta de histórico não impede uma ideia futura.',
+      'Não transforme uma proposta futura em fato passado.',
+      'O head booker é quem decide, mas você pode discordar e defender outra ideia.',
+      'Não diga "não há dados suficientes" só porque a empresa é nova. Se o save é pequeno, use o que existe e explique como você construiria o restante.',
+      'Nunca escolha o próprio campeão como alguém que vai destroná-lo.',
+      'Não use conhecimento do wrestling real para preencher lacunas do save.',
+      'Responda em português brasileiro, natural, 2 a 5 frases. Sem cabeçalho, sem bullets, sem "segundo os dados", sem repetir a pergunta.',
+      'Não repita literalmente o argumento de outra pessoa. Reaja ao que ela acabou de dizer e acrescente uma leitura nova.'
+    ];
+    if(key==='jj') base.push(
+      'PERSONA: J.J. PURPLE. Você é o booker principal da mesa. Tenha opinião. Quando perguntarem quem deve destronar alguém, ESCOLHA UM NOME do roster e defenda a escolha por timing, momentum, potencial, proteção e construção futura. Não precisa de histórico de title shot para escolher alguém.',
+      'Você pode dizer "eu iria de X" e depois explicar como começaria a construir X. Não fique esperando mais dados para tudo.'
+    );
+    if(key==='tony') base.push(
+      'PERSONA: CREATIVE ROOM. Você entra DEPOIS do J.J. e reage ao que ele acabou de propor. Pode concordar, mas precisa acrescentar um ângulo concreto: como a história começa, qual conflito cria, que arco pode nascer ou qual alternativa mudaria a construção.',
+      'Você não deve virar Analista. Futuro é seu território.'
+    );
+    if(key==='gendo') base.push(
+      'PERSONA: GENDO IKARI. Você é o segundo booker, ousado. Reaja às duas falas anteriores. Pode comprar a escolha do J.J. com um twist ou discordar e defender outro nome VÁLIDO do roster. Pense em risco/recompensa, surpresa e direção de médio prazo.',
+      'Não use a ausência de histórico como desculpa para encerrar a conversa.'
+    );
+    if(key==='hal') base.push(
+      'PERSONA: ANALISTA. Você é o último da mesa. Não é o "porteiro" que mata a conversa. Confira os fatos do save e diga se a ideia tem sustentação nos sinais que existem; se os dados forem poucos, diga isso brevemente e então explique qual sinal ainda dá para usar e qual dado a mesa precisa produzir.',
+      'Você pode concordar com uma escolha ou levantar uma ressalva. Não invente números e não exija que um futuro desafiante já tenha lutado pelo título.'
+    );
+    return base.join('\n');
+  }
+
+  function taskFor(key,latest,round,ctx){
+    if(key==='jj') return [
+      'O HEAD BOOKER ACABOU DE PERGUNTAR:',
+      latest,
+      '',
+      'Você fala primeiro. Dê uma posição de booker de verdade. Se ele perguntou "quem deve destronar X", escolha UM nome do bloco CANDIDATOS VIVOS e diga por que você construiria esse nome.',
+      'Não escolha o campeão. Não diga que o escolhido já teve title shot se isso não estiver no save.',
+      'A empresa ser nova é argumento para construir, não motivo para recusar a decisão.',
+      '',
+      'SAVE PARA ESTA RODADA:',
+      ctx
+    ].join('\n');
+
+    return [
+      'HEAD BOOKER:',
+      latest,
+      '',
+      'FALAS DESTA RODADA, EM ORDEM:',
+      round||'(J.J. ainda não falou)',
+      '',
+      key==='tony'
+        ? 'Agora reaja ao J.J. como Creative Room. Não faça outro relatório. Acrescente UMA ideia de construção que torne a escolha mais interessante; se discordar, diga o que mudaria e por quê.'
+        : key==='gendo'
+        ? 'Agora reaja à mesa como segundo booker. Concorde com um twist ou defenda OUTRO nome válido. Quero uma opinião de booking, não um parecer de falta de dados.'
+        : 'Agora feche a rodada como Analista. Valide ou questione a ideia usando APENAS os sinais reais do save. Se houver poucos dados, trate isso como estágio inicial da empresa e diga qual sinal existe e como ele pode ser desenvolvido. Não repita "não há dados suficientes" como resposta inteira.',
+      '',
+      'REGRAS: passado = save; futuro = booking. Nunca invente fatos.',
+      '',
+      'SAVE:',
+      ctx
+    ].join('\n');
+  }
+
+  function clean(text,key,meeting){
+    let t=String(text||'').replace(/^\s*(?:J\.J\. PURPLE|CREATIVE ROOM|GENDO IKARI|ANALISTA)\s*:\s*/i,'').trim();
+    /* Evita que o modelo tente transformar o campeão em destronador. */
+    try{
+      const d=typeof debate==='function'?debate(meeting):{};
+      const focal=C(d.focal||'');
+      if(focal && new RegExp('\\b'+focal.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(t) &&
+         /\b(destron|tirar|tomar|perder o titulo|perder o título|novo campe[aã]o)\b/i.test(t)){
+        /* Não apaga a fala: o V34 canon guard pode corrigir. */
+      }
+    }catch(e){}
+    return t;
+  }
+
+  async function runV35(phase,userText){
+    const meeting=S.bookingMeeting;
+    if(!meeting) return;
+    if(busy) return toast('Espere as vozes terminarem.');
+    const latest=String(userText||lastUser(meeting)||'').trim();
+    if(!latest) return;
+
+    try{ if(typeof absorbUser==='function') absorbUser(meeting,latest); }catch(e){}
+    const d=typeof debate==='function'?debate(meeting):{};
+    busy=true; window.__mtgRunning=true;
+    const token=meeting.runId=String(Date.now())+':'+Math.random().toString(36).slice(2);
+
+    const keys=['jj','tony','gendo','hal'];
+    const labels={jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA'};
+    try{
+      const ctx=saveContext(meeting,latest);
+      let round='';
+      for(const key of keys){
+        if(S.bookingMeeting!==meeting||meeting.runId!==token) break;
+        const msg={role:'persona',persona:key,text:'…',id:Date.now()+meeting.messages.length};
+        meeting.messages.push(msg); persist(); if(tab==='meeting')render();
+
+        const prompt=taskFor(key,latest,round,ctx);
+        let answer='';
+        try{
+          await bookerSample(prompt,{
+            engine:K.engine,
+            system:humanSystem(key),
+            onText:x=>{answer=String(x.text||'');msg.text=clean(answer,key,meeting);persist();if(tab==='meeting')render()},
+            maxTok:700
+          });
+        }catch(e){
+          console.warn('[PLW V35] '+key,e);
+        }
+
+        answer=clean(answer||msg.text,key,meeting);
+        if(!answer || answer==='…'){
+          answer= key==='jj'
+            ? 'Eu escolheria um nome do roster e começaria a construir essa pessoa agora; quatro meses é justamente a hora de criar esse histórico.'
+            : key==='tony'
+            ? 'Eu pegaria a escolha anterior e criaria uma escalada em etapas, para o público acompanhar a transformação em desafiante.'
+            : key==='gendo'
+            ? 'Eu iria um passo mais ousado: manteria a escolha ou trocaria por outro nome do roster, mas já pensando no arco das próximas semanas.'
+            : 'O save ainda é pequeno, então eu usaria os sinais que existem para decidir quem recebe essa construção e mediria o resultado nas próximas lutas.';
+          msg.text=answer;
+        }
+        /* Rejeições/correções do head booker são respeitadas pela rodada seguinte. */
+        persist(); if(tab==='meeting')render();
+        round += (round?'\n':'') + labels[key]+': '+msg.text;
+      }
+    }finally{
+      busy=false; window.__mtgRunning=false;
+      try{persist();if(tab==='meeting')render()}catch(e){}
+    }
+  }
+
+  window.meetingRunPanel=runV35;
+  console.log('[PLW] V35 — reunião humana: JJ → Creative → Gendo → Analista; futuro é booking, passado é save; chats privados intactos');
+})();
+</script>
+
+
+<!-- ===== PLW V36 — MEMÓRIA REAL DA REUNIÃO / TRANSCRIPT NO LOCALSTORAGE =====
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V36__) return;
+  window.__PLW_MTG_V36__=true;
+
+  const C=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+  const clean=x=>String(x||'').replace(/\s+/g,' ').trim();
+  const label={jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA',user:'VOCÊ'};
+
+  /*
+   * IMPORTANTE:
+   * meeting.messages = o que está visível na tela.
+   * meeting.memoryLog = memória permanente da conversa desta reunião.
+   * Excluir uma fala remove da tela, mas NÃO apaga o que a mesa já ouviu.
+   * Salvar uma ideia marca o item como salvo, mas a conversa continua normalmente.
+   */
+  function ensureMemory(m){
+    if(!m) return [];
+    if(!Array.isArray(m.memoryLog)) m.memoryLog=[];
+    return m.memoryLog;
+  }
+
+  function remember(m,role,persona,text,meta){
+    if(!m||!text||text==='…') return;
+    const log=ensureMemory(m);
+    const id=(meta&&meta.sourceId)||('mtg:'+Date.now()+':'+Math.random().toString(36).slice(2));
+    /* Não duplica o mesmo texto/persona quando o streaming renderiza várias vezes. */
+    const existing=log.find(x=>x.id===id);
+    if(existing){ existing.text=String(text); if(meta)Object.assign(existing,meta); persist(); return existing; }
+    const row={id,role,persona:persona||'',text:String(text),at:new Date().toISOString(),saved:false,deleted:false};
+    if(meta)Object.assign(row,meta);
+    log.push(row);
+    /* Mantém memória suficiente para a conversa longa sem deixar o prompt infinito. */
+    if(log.length>120) log.splice(0,log.length-120);
+    persist();
+    return row;
+  }
+
+  function memoryTranscript(m,limit=36){
+    const log=ensureMemory(m).filter(x=>x.text&&x.text!=='…');
+    return log.slice(-limit).map(x=>{
+      const who=x.role==='user'?'HEAD BOOKER':(label[x.persona]||x.persona||'EQUIPE');
+      return who+': '+String(x.text).slice(0,900)+(x.deleted?' [fala removida da tela]':'');
+    }).join('\n');
+  }
+
+  function memoryForModel(m){
+    const log=ensureMemory(m).filter(x=>x.text&&x.text!=='…');
+    const recent=log.slice(-32);
+    return recent.map(x=>{
+      const who=x.role==='user'?'HEAD BOOKER':(label[x.persona]||x.persona||'EQUIPE');
+      return who+': '+String(x.text).slice(0,850);
+    }).join('\n');
+  }
+
+  function archiveVisiblePersona(m,msg){
+    if(!m||!msg||msg.role!=='persona'||!msg.text||msg.text==='…')return;
+    const id=String(msg.id||'');
+    let row=ensureMemory(m).find(x=>x.sourceId===id);
+    if(!row){
+      row=remember(m,'persona',msg.persona,msg.text,{sourceId:id||undefined});
+    }else{
+      row.text=msg.text;
+      row.deleted=!!msg.deleted;
+      persist();
+    }
+    return row;
+  }
+
+  /* Inicializa a memória de reuniões antigas sem apagar nada. */
+  function migrate(m){
+    if(!m)return;
+    ensureMemory(m);
+    if(!m.memoryMigrated){
+      for(const x of (m.messages||[])){
+        if(!x.text||x.text==='…')continue;
+        const id=String(x.id||'');
+        if(!ensureMemory(m).some(y=>y.sourceId===id && id))
+          remember(m,x.role,x.persona,x.text,{sourceId:id||undefined,deleted:!!x.deleted});
+      }
+      m.memoryMigrated=true;
+      persist();
+    }
+  }
+
+  /* Toda mensagem do usuário entra no log ANTES de chamar a IA. */
+  const oldSend=sendMeetingMessage;
+  window.sendMeetingMessage=function(){
+    const input=$('#meeting-input'),text=clean(input&&input.value),m=S.bookingMeeting;
+    if(m&&text){
+      migrate(m);
+      remember(m,'user','user',text);
+    }
+    return oldSend.apply(this,arguments);
+  };
+
+  /* O start com uma abertura também precisa entrar no histórico permanente. */
+  const oldStart=startBookingMeeting;
+  window.startBookingMeeting=function(){
+    const opening=clean($('#meeting-opening')?.value||'');
+    const before=S.bookingMeeting;
+    const r=oldStart.apply(this,arguments);
+    const m=S.bookingMeeting;
+    if(m && m!==before){
+      ensureMemory(m);
+      if(opening) remember(m,'user','user',opening);
+      persist();
+    }
+    return r;
+  };
+
+  /* Substitui a exclusão visual: a fala sai da tela, mas fica arquivada para a conversa.
+     Assim o usuário pode limpar a lousa sem apagar a memória da sala. */
+  const oldDelete=window.meetingDeleteMessage;
+  window.meetingDeleteMessage=function(i){
+    const m=S.bookingMeeting,x=m?.messages?.[i];
+    if(m&&x){
+      migrate(m);
+      const row=ensureMemory(m).find(y=>y.sourceId===String(x.id||''));
+      if(row) row.deleted=true;
+      else remember(m,x.role,x.persona,x.text,{sourceId:String(x.id||''),deleted:true});
+      x.deleted=true;
+      m.messages.splice(i,1);
+      persist();
+      render();
+      toast('Fala removida da tela. A memória da reunião foi preservada.');
+      return;
+    }
+    if(typeof oldDelete==='function')return oldDelete.apply(this,arguments);
+  };
+
+  /* Salvar ideia: salva no Plano, marca no log e NÃO encerra a conversa. */
+  const oldSave=window.meetingSaveIdea;
+  window.meetingSaveIdea=function(i){
+    const m=S.bookingMeeting,x=m?.messages?.[i];
+    if(m&&x){
+      migrate(m);
+      const row=ensureMemory(m).find(y=>y.sourceId===String(x.id||''));
+      if(row) row.saved=true;
+      persist();
+    }
+    const r=typeof oldSave==='function'?oldSave.apply(this,arguments):undefined;
+    if(m){persist();if(tab==='meeting')render();}
+    return r;
+  };
+
+  /* Nova versão do runner: mesma lógica humana da V35, mas cada voz recebe a conversa inteira. */
+  window.meetingRunPanel=async function(phase,userText){
+    const m=S.bookingMeeting;
+    if(!m)return;
+    if(busy)return toast('Espere as vozes terminarem.');
+    migrate(m);
+    const latest=clean(userText||'');
+    if(!latest)return;
+
+    const d=typeof debate==='function'?debate(m):{};
+    const token=m.runId=String(Date.now())+':'+Math.random().toString(36).slice(2);
+    busy=true;window.__mtgRunning=true;
+
+    const keys=['jj','tony','gendo','hal'];
+    const labels={jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA'};
+
+    /* Não usa a função antiga V35: aqui o transcript é explícito e cumulativo. */
+    function ctx(){
+      try{
+        if(typeof saveContext==='function')return saveContext(m,latest);
+      }catch(e){}
+      return typeof buildMeetingContext==='function'?buildMeetingContext():'';
+    }
+
+    function sys(key){
+      const base=(typeof bookerSystem==='function'?bookerSystem(key):'');
+      const persona={
+        jj:'Você é J.J. Purple, booker principal. Tenha opinião e escolha caminhos de futuro.',
+        tony:'Você é a Creative Room. Reaja ao que já foi dito e desenvolva uma consequência ou construção concreta.',
+        gendo:'Você é Gendo Ikari, segundo booker. Pode concordar com um twist ou discordar com outro nome válido.',
+        hal:'Você é o Analista. Verifique os fatos do save, mas participe do booking; poucos dados significam que a empresa precisa produzi-los.'
+      }[key];
+      return base+'\n\n# MEMÓRIA DA REUNIÃO — OBRIGATÓRIA\n'+
+        'Você está no meio de uma conversa contínua. As falas anteriores abaixo realmente aconteceram nesta mesma reunião. REAJA a elas. Não reinicie o assunto, não se apresente novamente e não repita uma resposta antiga.\n'+
+        persona+'\n'+
+        'Passado = somente SAVE. Futuro = booking e pode ser criado agora. A empresa tem poucos meses, então falta de histórico NÃO encerra a discussão.\n'+
+        'Nunca escolha o próprio campeão como destronador. Nunca invente fatos passados.\n'+
+        'Fale como um booker humano em português brasileiro, 2–5 frases, natural, sem relatório, sem lista e sem a expressão "não há dados suficientes" como resposta inteira.';
+    }
+
+    try{
+      let round='';
+      for(const key of keys){
+        if(S.bookingMeeting!==m||m.runId!==token)break;
+        const msg={role:'persona',persona:key,text:'…',id:Date.now()+m.messages.length+Math.random()};
+        m.messages.push(msg);persist();if(tab==='meeting')render();
+
+        const transcript=memoryForModel(m);
+        const currentRound=round||'(nenhuma fala desta rodada ainda)';
+        const personaTask=key==='jj'
+          ?'Fale primeiro nesta rodada. Dê uma escolha clara e uma razão de booking. Se a pergunta pede quem deve destronar alguém, escolha UM nome válido do roster e explique como começaria a construir essa pessoa.'
+          :key==='tony'
+          ?'Você vem depois do J.J. e deve reagir especificamente ao que ele acabou de dizer. Pode concordar, mas acrescente uma consequência, arco ou conflito novo. Não recomece do zero.'
+          :key==='gendo'
+          ?'Você vem depois da Creative Room. Reaja às duas falas anteriores. Pode comprar a ideia com um twist ou discordar com outro nome válido. Traga uma leitura realmente sua.'
+          :'Você fecha a rodada. Use os fatos do save para validar ou tensionar o que foi dito, mas continue sendo parte da conversa. Se os dados forem poucos, diga qual sinal existe e o que a mesa precisa construir, sem matar a discussão.';
+
+        const prompt=[
+          'MENSAGEM ATUAL DO HEAD BOOKER:',latest,
+          '',
+          'CONVERSA COMPLETA JÁ OCORRIDA NESTA REUNIÃO (memória persistente):',transcript||'(primeira fala)',
+          '',
+          'FALAS DESTA RODADA ATÉ AGORA:',currentRound,
+          '',
+          'CONTEXTO CANÔNICO DO SAVE:',ctx(),
+          '',
+          'SUA TAREFA AGORA:',personaTask,
+          'IMPORTANTE: o HEAD BOOKER acabou de falar. Responda ao que ele acabou de dizer, mas leve em conta toda a conversa acima. Não aja como se fosse a primeira pergunta.',
+          'Responda somente como '+labels[key]+'.'
+        ].join('\n');
+
+        let answer='';
+        try{
+          await bookerSample(prompt,{engine:K.engine,system:sys(key),maxTok:700,onText:x=>{
+            if(m.runId!==token)return;
+            answer=String(x.text||'');
+            msg.text=typeof removeRepeatedResponseText==='function'?removeRepeatedResponseText(answer):answer;
+            archiveVisiblePersona(m,msg);
+            if(tab==='meeting')render();
+          }});
+        }catch(e){console.warn('[PLW V36] '+key,e)}
+
+        answer=String(answer||msg.text||'').trim();
+        if(!answer||answer==='…'){
+          answer=key==='jj'
+            ?'Eu escolheria alguém do roster que a gente consiga construir a partir de agora, porque quatro meses ainda é começo de empresa.'
+            :key==='tony'
+            ?'Eu pegaria essa escolha e criaria um conflito progressivo para ela ganhar peso antes da luta pelo título.'
+            :key==='gendo'
+            ?'Eu compraria a ideia, mas colocaria um risco maior no caminho para a gente descobrir se esse nome aguenta o topo.'
+            :'O save ainda é curto; eu usaria os sinais que temos agora e acompanharia o que essa construção produzir nas próximas semanas.';
+          msg.text=answer;
+        }
+        msg.text=typeof removeRepeatedResponseText==='function'?removeRepeatedResponseText(msg.text):msg.text;
+        if(typeof plwTrimSentences==='function')msg.text=plwTrimSentences(msg.text,5)||msg.text;
+        archiveVisiblePersona(m,msg);
+        meetingTrackPersonaIdeas(m);
+        persist();if(tab==='meeting')render();
+        round+=(round?'\n':'')+labels[key]+': '+msg.text;
+      }
+    }finally{
+      busy=false;window.__mtgRunning=false;
+      try{meetingTrackPersonaIdeas(m);persist();if(tab==='meeting')render()}catch(e){}
+    }
+  };
+
+  /* Migra imediatamente a reunião atual para o novo formato. */
+  try{if(S.bookingMeeting)migrate(S.bookingMeeting)}catch(e){}
+  console.log('[PLW] V36 — memória persistente da reunião: transcript completo no LocalStorage; excluir não apaga memória; salvar ideia não interrompe conversa');
+})();
+</script>
+
+<!-- ===== PLW V37 — MINI-CARD É A AUTORIDADE / NENHUMA VOZ FECHA LUTA SOZINHA ===== -->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V37__) return;
+  window.__PLW_MTG_V37__=true;
+
+  const C=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/\p{M}/gu,'').replace(/\s+/g,' ').trim();
+  const pairKey=ns=>(ns||[]).filter(Boolean).map(C).sort().join('|');
+  const ppvOf=m=>String(m?.target||'').split(' — ')[0].trim();
+
+  function state(m){
+    try{return typeof meetingStateEnsure==='function'?meetingStateEnsure(m):(m.state||(m.state={}));}
+    catch(e){return m.state||(m.state={})}
+  }
+
+  /* Reproduz a mesma fonte usada pelo MINI-CARD: card do PPV + lutas citadas pelo usuário
+     + lutas gravadas explicitamente na memória da reunião. A IA nunca entra aqui. */
+  function authoritativeRows(m){
+    const out=[],seen=new Set(),s=state(m),removed=new Set(s.removedMatches||[]);
+    const add=(names,meta)=>{
+      names=(names||[]).filter(Boolean).map(C); if(names.length<2)return;
+      const k=pairKey(names); if(!k||seen.has(k)||removed.has(k))return;
+      seen.add(k); out.push({key:k,names,source:meta||'context'});
+    };
+    try{
+      const p=ppvOf(m);
+      if(p && typeof ppvPlan==='function') for(const x of (ppvPlan(p).card||[])) add((x.a||[]).filter(Boolean),'ppv');
+    }catch(e){}
+    try{
+      for(const msg of (m.messages||[]).filter(x=>x.role==='user'&&x.text)){
+        for(const p of (typeof meetingPairsFromText==='function'?meetingPairsFromText(msg.text):[])) add(p,'user');
+      }
+    }catch(e){}
+    for(const x of (s.cardMatches||[])) add(x.names||[],'meeting');
+    return out;
+  }
+
+  function syncLocksToMiniCard(m){
+    if(!m)return;
+    const s=state(m), rows=authoritativeRows(m), allowed=new Set(rows.map(r=>r.key));
+    if(!Array.isArray(s.debate)){
+      const d=s.debate||(s.debate={});
+      if(!Array.isArray(d.lockedMatches))d.lockedMatches=[];
+      /* Qualquer lock que não esteja no MINI-CARD é lixo/stale state e não pode aparecer como fechado. */
+      d.lockedMatches=d.lockedMatches.filter(x=>allowed.has(pairKey(x.names||[])));
+      if(!d.lockedMatches.length && d.mode==='locked'){
+        d.mode='discuss'; d.topic='';
+      }
+      /* O mini-card é o que está em pauta; não promovemos ideia para luta fechada. */
+      if(Array.isArray(s.confirmedMatches))
+        s.confirmedMatches=s.confirmedMatches.filter(x=>allowed.has(pairKey(x.participants||x.names||[])));
+      if(Array.isArray(s.plannedMatches))
+        s.plannedMatches=s.plannedMatches.filter(x=>allowed.has(pairKey(x.participants||x.names||[])));
+    }
+    return rows;
+  }
+
+  function cardBrief(m){
+    const rows=syncLocksToMiniCard(m);
+    const p=ppvOf(m);
+    return 'MINI-CARD OFICIAL DA SALA — '+(p||'PPV')+'\n'+
+      (rows.length?rows.map((r,i)=>(i+1)+'. '+r.names.join(' × ')).join('\n'):'(nenhuma luta no mini-card)')+
+      '\n\nREGRA ABSOLUTA: estas lutas são apenas contexto/estado já definido pelo HEAD BOOKER.\n'+
+      'As personas PODEM discutir nomes para o futuro, mas NÃO podem transformar uma sugestão em luta fechada.\n'+
+      'Somente uma confirmação explícita do HEAD BOOKER pode alterar o card.\n'+
+      'Se o HEAD BOOKER não confirmou, trate qualquer nome novo como IDEIA, nunca como luta marcada.';
+  }
+
+  /* Corrige estado antigo antes de qualquer render/run: MJF x Moxley não pode continuar como
+     "Luta fechada" se não estiver no MINI-CARD oficial. */
+  try{if(S.bookingMeeting)syncLocksToMiniCard(S.bookingMeeting)}catch(e){}
+
+  /* Intercepta o runner FINAL (V36). As quatro vozes continuam com memória, mas recebem o
+     MINI-CARD como bloco prioritário e não ganham permissão para alterá-lo. */
+  const oldRun=window.meetingRunPanel;
+  window.meetingRunPanel=async function(phase,userText){
+    const m=S.bookingMeeting;
+    if(!m||typeof oldRun!=='function')return oldRun.apply(this,arguments);
+    syncLocksToMiniCard(m);
+
+    const rows=authoritativeRows(m);
+    const locked=rows.filter(r=>r.names.some(n=>/moxley/i.test(n)));
+    const moxPair=locked.length?locked[locked.length-1]:null;
+
+    /* Snapshot: qualquer alteração de card feita por código durante a geração será desfeita
+       se não vier de confirmação explícita do usuário. */
+    const before=rows.map(r=>r.key);
+    const beforeLocked=(state(m).debate?.lockedMatches||[]).map(x=>x.key||pairKey(x.names||[]));
+
+    /* O V36 já monta o prompt. Acrescentamos um contexto de autoridade que o modelo não pode
+       interpretar como mera sugestão. */
+    const oldBuild=window.buildMeetingContext;
+    let patched=false;
+    if(typeof oldBuild==='function'){
+      window.buildMeetingContext=function(){
+        const base=oldBuild.apply(this,arguments);
+        return base+'\n\n'+cardBrief(m)+'\n'+(moxPair?'\nOPONENTE ATUAL DO MOXLEY NO MINI-CARD: '+moxPair.names.find(n=>!/moxley/i.test(n))+' — NÃO SUBSTITUA SEM CONFIRMAÇÃO EXPLÍCITA DO HEAD BOOKER.':'');
+      };
+      patched=true;
+    }
+    try{
+      return await oldRun.apply(this,arguments);
+    }finally{
+      if(patched)window.buildMeetingContext=oldBuild;
+      /* Depois da rodada, restaura o card como estava. Ideia ≠ decisão. */
+      syncLocksToMiniCard(m);
+      const nowRows=authoritativeRows(m);
+      const nowKeys=new Set(nowRows.map(r=>r.key));
+      const d=state(m).debate||(state(m).debate={});
+      d.lockedMatches=(d.lockedMatches||[]).filter(x=>nowKeys.has(x.key||pairKey(x.names||[])));
+      /* Se o runner antigo criou MJF x Moxley como lock, ele some aqui; a conversa permanece. */
+      if(!d.lockedMatches.length && d.mode==='locked'){d.mode='discuss';d.topic='';}
+      persist();
+      if(typeof tab!=='undefined'&&tab==='meeting')render();
+    }
+  };
+
+  /* O parser antigo podia tratar uma frase opinativa como decisão. Depois dele rodar,
+     removemos qualquer lock que não esteja no mini-card. Para mudar o card, o usuário deve
+     usar os controles do card/mini-card ou uma confirmação inequívoca. */
+  const oldUpdate=window.meetingUpdateFromUser;
+  if(typeof oldUpdate==='function'){
+    window.meetingUpdateFromUser=function(m,text){
+      const r=oldUpdate.apply(this,arguments);
+      try{syncLocksToMiniCard(m);persist()}catch(e){}
+      return r;
+    };
+  }
+
+  console.log('[PLW] V37 — MINI-CARD é autoridade; vozes só discutem; nenhuma sugestão vira luta fechada sem confirmação do Head Booker');
+})();
+</script>
+
+
+<!-- ===== PLW V38 — HEAD BOOKER CONTROLS THE DISCUSSION ===== -->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V38__) return;
+  window.__PLW_MTG_V38__=true;
+
+  const canon=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+  const key=ns=>(ns||[]).filter(Boolean).map(canon).sort().join('|');
+  const ppv=m=>String(m?.target||'').split(' — ')[0].trim();
+  const st=m=>{try{return typeof meetingStateEnsure==='function'?meetingStateEnsure(m):(m.state||(m.state={}));}catch(e){return m.state||(m.state={})}};
+
+  /* Só o card efetivamente gravado no PPV/mini-card é estado. Falas das personas nunca entram aqui. */
+  function officialCard(m){
+    const s=st(m), out=[], seen=new Set(), removed=new Set(s.removedMatches||[]);
+    const add=(names,source)=>{
+      names=(names||[]).filter(Boolean).map(canon);
+      if(names.length<2)return;
+      const k=key(names);
+      if(!k||seen.has(k)||removed.has(k))return;
+      seen.add(k);out.push({key:k,names,source});
+    };
+    try{
+      const P=ppv(m);
+      if(P&&typeof ppvPlan==='function')for(const x of (ppvPlan(P).card||[]))add(x.a||[],'ppv');
+    }catch(e){}
+    /* cardMatches criadas pelo botão Gravar luta/edição do usuário também são oficiais */
+    for(const x of (s.cardMatches||[])){
+      if(x && x.source==='meeting')add(x.names||[],'meeting');
+    }
+    return out;
+  }
+
+  function cardContext(m){
+    const rows=officialCard(m), p=ppv(m);
+    return [
+      '=== MINI-CARD OFICIAL / ESTADO DO HEAD BOOKER ===',
+      'PPV: '+(p||'não definido'),
+      rows.length?rows.map((r,i)=>(i+1)+'. '+r.names.join(' × ')).join('\n'):'(nenhuma luta registrada)',
+      '',
+      'REGRA DE AUTORIDADE:',
+      '- Este card é estado, não uma sugestão.',
+      '- As quatro personas NÃO podem criar, fechar, substituir, remover ou trocar uma luta do Mini-Card.',
+      '- Uma fala como “eu iria de MJF” é SOMENTE uma proposta verbal.',
+      '- Só uma confirmação explícita do HEAD BOOKER pode transformar uma proposta em decisão.',
+      '- “vamos trabalhar no card”, “o que acham do card?” ou pergunta semelhante NÃO autoriza escolher uma luta automaticamente.',
+      '- Se o Head Booker abriu o assunto de forma geral, primeiro conversem sobre o card existente e perguntem qual vaga/decisão ele quer trabalhar.',
+      '- Nunca diga que uma luta foi marcada, fechada, confirmada ou adicionada se o Head Booker não confirmou isso.',
+      '- Se uma luta já está no Mini-Card, trate os nomes exatamente como estão; não substitua um participante por outro.',
+      '- Ideias de futuras rivalidades podem ser discutidas sem alterar o Mini-Card.'
+    ].join('\n');
+  }
+
+  /* O V36 usa bookerSample. Este wrapper injeta a autoridade depois das instruções anteriores,
+     evitando que a tarefa genérica “dê uma escolha clara” vire uma decisão automática. */
+  const oldSample=window.bookerSample;
+  if(typeof oldSample==='function'){
+    window.bookerSample=async function(prompt,opts){
+      const m=S.bookingMeeting;
+      const authority=m?cardContext(m):'';
+      const p=String(prompt||'');
+      const broad=/\b(vamos|vamos trabalhar|trabalhar|ver|analisar|organizar|montar|planejar)\b.*\b(card|final battle|ppv)\b|\b(card|final battle|ppv)\b.*\b(vamos|trabalhar|organizar|montar|planejar)\b/i.test(p);
+      const hard=[
+        authority,
+        '',
+        '=== CONTROLE DO HEAD BOOKER ===',
+        broad
+          ? 'A mensagem atual é uma abertura GERAL sobre o card. NÃO escolha automaticamente um desafiante, NÃO feche uma luta e NÃO substitua nenhuma luta. Converse sobre as lutas que já estão no card e/ou pergunte qual decisão o Head Booker quer discutir.'
+          : 'Mesmo quando a pergunta pede uma sugestão, a resposta é uma PROPOSTA. Não trate a proposta como decisão nem como luta fechada.',
+        'A palavra “eu escolheria”, “eu iria de”, “sugiro” ou equivalente significa IDEIA. Nunca significa CONFIRMADO.',
+        'Somente frases explícitas do Head Booker como “fechamos”, “confirmo”, “pode colocar no card”, “grava essa luta” ou equivalente autorizam uma mudança — e o código é quem registra essa mudança.',
+        'NUNCA anuncie uma alteração do Mini-Card na própria resposta.'
+      ].join('\n');
+      const nextPrompt=p+'\n\n'+hard;
+      const nextOpts=Object.assign({},opts||{}, {system:String((opts&&opts.system)||'')+'\n\n'+authority+'\n\nHARD RULE: o Head Booker decide o card. Personas só propõem e discutem. Não transforme proposta em decisão.'});
+      return oldSample.call(this,nextPrompt,nextOpts);
+    };
+  }
+
+  /* Proteção final: se alguma rotina antiga tentar deixar uma luta de persona como lock,
+     só preservamos o que estiver no Mini-Card oficial. A memória da conversa continua intacta. */
+  const oldRun=window.meetingRunPanel;
+  if(typeof oldRun==='function'){
+    window.meetingRunPanel=async function(){
+      const m=S.bookingMeeting;
+      if(m){
+        const s=st(m), allowed=new Set(officialCard(m).map(x=>x.key));
+        if(s.debate && Array.isArray(s.debate.lockedMatches)){
+          s.debate.lockedMatches=s.debate.lockedMatches.filter(x=>allowed.has(x.key||key(x.names||[])));
+          if(!s.debate.lockedMatches.length && s.debate.mode==='locked'){s.debate.mode='discuss';s.debate.topic='';}
+        }
+        if(Array.isArray(s.confirmedMatches))s.confirmedMatches=s.confirmedMatches.filter(x=>allowed.has(key(x.participants||x.names||[])));
+        if(Array.isArray(s.plannedMatches))s.plannedMatches=s.plannedMatches.filter(x=>allowed.has(key(x.participants||x.names||[])));
+        persist();
+      }
+      return oldRun.apply(this,arguments);
+    };
+  }
+
+  try{if(S.bookingMeeting)persist()}catch(e){}
+  console.log('[PLW] V38 — Head Booker controls decisions; broad card prompts do not auto-book; Mini-Card remains authoritative');
+})();
+</script>
+
+<!-- ===== PLW V39 — DIREÇÃO DO HEAD BOOKER É LEI / NÃO REABRIR DECISÃO =====
+     Corrige o bug do transcript: usuário define arco (Ospreay x MJF, hair vs hair,
+     MJF perde/careca/some/destrói Motion/volta/draft PLWAR) e as vozes respondem
+     com "eu iria de Zack Sabre" ou "Konosuke". A partir daqui:
+     1) toda fala do Head Booker que DIRECIONA (rivalidade, estip, resultado, arco,
+        draft, quem perde, quem some) vira DIREÇÃO TRAVADA na memória da reunião;
+     2) o prompt de cada voz recebe o bloco DIREÇÃO TRAVADA antes de qualquer tarefa;
+     3) propor outro desafiante / outro main / outro resultado é proibido quando já
+        existe direção travada sobre o mesmo assunto;
+     4) a resposta correta é CONSTRUIR em cima (ângulos, timing, consequências),
+        não reformular a decisão.
+-->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V39__) return;
+  window.__PLW_MTG_V39__=true;
+
+  const C=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const clean=x=>String(x||'').replace(/\s+/g,' ').trim();
+
+  function st(m){
+    try{return typeof meetingStateEnsure==='function'?meetingStateEnsure(m):(m.state||(m.state={}));}
+    catch(e){return m.state||(m.state={})}
+  }
+
+  function ensureDir(m){
+    const s=st(m);
+    if(!Array.isArray(s.userDirections)) s.userDirections=[];
+    return s.userDirections;
+  }
+
+  function isDirectionSpeech(raw){
+    const t=F(raw);
+    if(!t||t.length<12) return false;
+    const onlyAsk=/^(o que|oque|e ai|e aí|e voc[eê]s|voc[eê]s|como|qual|quem)\b/.test(t)
+      && !/\b(eu quero|vamos|fica|fica assim|decidido|fechado|a rivalidade|o arco|perde|some|draft|careca|hair|vs hair)\b/.test(t);
+    if(onlyAsk && t.length<80) return false;
+
+    return (
+      /\b(a rivalidade|rivalidade (entre|é|eh)|maior rivalidade)\b/.test(t)
+      || /\b(hair\s*(x|vs|versus)\s*hair|cabelo\s*(x|vs)\s*cabelo)\b/.test(t)
+      || /\b(sai|saindo|fica|ficando)\s+(como\s+)?(perdedor|vencedor|careca)\b/.test(t)
+      || /\b(perde a luta|perde e|fica careca|some um pouco|desaparece|destroi|destr[oó]i|volta em|é draftado|sera draftado|draftado para|draftado pra)\b/.test(t)
+      || /\b(eu quero|quero que|vai ser assim|fica assim|decidido|fechamos|confirmo|pode ser isso|é isso|eh isso|pode seguir|siga com|continua com)\b/.test(t)
+      || /\b(para finalizar|pra finalizar|o arco [eé]|a constru[cç][aã]o [eé]|o plano [eé])\b/.test(t)
+      || /\b(n[aã]o aceita|so aceita|s[oó] aceita)\b/.test(t)
+      || (/\b(mjf|maxwell|ospreay|will ospreay)\b/.test(t) && /\b(perde|vence|careca|draft|some|destroi|hair)\b/.test(t))
+    );
+  }
+
+  function extractDirection(raw){
+    const text=clean(raw);
+    if(!text) return null;
+    const names=[];
+    try{
+      const hit=(typeof resolveRosterMentions==='function'?resolveRosterMentions(text):[]);
+      hit.forEach(n=>{const c=C(n); if(c&&!names.includes(c)) names.push(c);});
+    }catch(e){}
+    if(/\bmjf\b|maxwell\s+jacob|friedman/i.test(text) && !names.some(n=>/friedman|mjf/i.test(n))){
+      const r=Object.keys(S.roster||{}).find(n=>/friedman|maxwell\s+jacob/i.test(n));
+      if(r) names.push(C(r));
+    }
+    if(/\bospreay\b/i.test(text) && !names.some(n=>/ospreay/i.test(n))){
+      const r=Object.keys(S.roster||{}).find(n=>/ospreay/i.test(n));
+      if(r) names.push(C(r));
+    }
+    return {
+      id:'dir:'+Date.now()+':'+Math.random().toString(36).slice(2,7),
+      text:text.slice(0,900),
+      names,
+      at:new Date().toISOString(),
+      kind: detectKind(text)
+    };
+  }
+
+  function detectKind(text){
+    const t=F(text);
+    if(/\bhair\b|\bcabelo\b/.test(t)) return 'stip+outcome';
+    if(/\bdraft|\bplwar\b|\bmotion\b/.test(t) && /\b(volta|some|destroi|careca|perde)\b/.test(t)) return 'arc';
+    if(/\brivalidade\b/.test(t)) return 'rivalry';
+    if(/\b(perde|vence|saindo como)\b/.test(t)) return 'outcome';
+    return 'direction';
+  }
+
+  function absorbDirection(m, raw){
+    if(!m||!raw) return false;
+    if(!isDirectionSpeech(raw)) return false;
+    const dir=extractDirection(raw);
+    if(!dir) return false;
+    const list=ensureDir(m);
+    const same=list.some(x=>F(x.text).slice(0,120)===F(dir.text).slice(0,120));
+    if(same) return false;
+    list.push(dir);
+    if(list.length>12) list.splice(0,list.length-12);
+    try{persist()}catch(e){}
+    console.log('[PLW V39] direção travada:', dir.kind, dir.names.join(' x '), dir.text.slice(0,80));
+    return true;
+  }
+
+  function directionBlock(m){
+    const list=ensureDir(m);
+    if(!list.length) return '';
+    const lines=list.slice(-8).map((d,i)=>{
+      const who=d.names&&d.names.length?(' ['+d.names.join(' × ')+']'):'';
+      return (i+1)+'. ('+d.kind+')'+who+' '+d.text;
+    }).join('\n');
+    return [
+      '=== DIREÇÃO TRAVADA DO HEAD BOOKER (LEI DA MESA) ===',
+      'O Head Booker JÁ DECIDIU o que está abaixo. Isso NÃO é sugestão aberta a voto.',
+      'Sua função é CONSTRUIR em cima (ângulo, timing, consequência, build semanal),',
+      'NÃO propor outro desafiante, NÃO trocar o oponente, NÃO reabrir "quem deveria ser",',
+      'NÃO dizer "eu iria de X" se X não for o nome que ele já fixou.',
+      'Se ele descreveu um arco (perde, careca, some, destrói brand, volta, draft),',
+      'trate esse arco como o plano oficial e só refine a execução.',
+      'Perguntas do tipo "o que acham?" depois de uma direção significam:',
+      '  "executem / reajam a ESTE plano", não "sugiram outro plano".',
+      '',
+      lines,
+      '',
+      'PROIBIDO nesta rodada: oferecer Konosuke, Zack Sabre, GUNTHER ou qualquer outro',
+      'nome como substituto do desafiante/arco já definido pelo Head Booker.',
+      'PERMITIDO: detalhes de promo, semanas de TV, reação do público, proteção,',
+      'risco do hair match, como vender a saída e o retorno, por que o draft faz sentido.'
+    ].join('\n');
+  }
+
+  const oldSend=window.sendMeetingMessage;
+  if(typeof oldSend==='function'){
+    window.sendMeetingMessage=function(){
+      const input=document.querySelector('#meeting-input');
+      const text=clean(input&&input.value);
+      const m=S.bookingMeeting;
+      if(m&&text) absorbDirection(m,text);
+      return oldSend.apply(this,arguments);
+    };
+  }
+
+  const oldUpdate=window.meetingUpdateFromUser;
+  if(typeof oldUpdate==='function'){
+    window.meetingUpdateFromUser=function(m,text){
+      try{absorbDirection(m,text)}catch(e){}
+      return oldUpdate.apply(this,arguments);
+    };
+  }
+
+  const oldSample=window.bookerSample;
+  if(typeof oldSample==='function'){
+    window.bookerSample=async function(prompt,opts){
+      const m=S.bookingMeeting;
+      let p=String(prompt||'');
+      let sys=String((opts&&opts.system)||'');
+      if(m){
+        const block=directionBlock(m);
+        if(block){
+          p=block+'\n\n'+p;
+          sys=sys+'\n\n'+block+'\n\nHARD RULE V39: se o Head Booker já fixou rivalidade, estipulação, quem perde, arco de saída/retorno ou draft, você NÃO oferece outro nome. Você executa e desenvolve o plano dele. Discordar de detalhe fino (timing de uma promo) é ok; trocar o protagonista da decisão dele é proibido.';
+        }
+        const lastU=(m.messages||[]).filter(x=>x.role==='user').slice(-1)[0];
+        const latest=clean(lastU&&lastU.text||'');
+        if(latest && isDirectionSpeech(latest)){
+          p+='\n\n=== TAREFA DESTA RODADA (V39) ===\nO Head Booker acabou de DAR DIREÇÃO, não pediu um card novo do zero.\nResponda em 2–5 frases: confirme que entendeu o plano e acrescente UMA consequência de booking (build, risco, proteção, semana de TV).\nNÃO sugira outro lutador no lugar dos nomes que ele citou.\nNÃO diga "eu iria de X" com X diferente.\nNÃO reformule a decisão dele.';
+        }
+      }
+      const nextOpts=Object.assign({},opts||{},{system:sys});
+      return oldSample.call(this,p,nextOpts);
+    };
+  }
+
+  const oldFin=window.finalizeText;
+  if(typeof oldFin==='function'){
+    window.finalizeText=function(t){
+      try{
+        const m=S.bookingMeeting;
+        const dirs=m?ensureDir(m):[];
+        if(dirs.length){
+          const last=dirs[dirs.length-1];
+          const fixed=new Set((last.names||[]).map(C));
+          if(fixed.size){
+            const prop=/(\beu iria de\b|\bmelhor [eé]\b|\beu colocaria\b|\bsugiro\b)\s+([A-ZÀ-Ý][\wÀ-ÿ]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ]+){0,3})/i.exec(String(t||''));
+            if(prop){
+              const suggested=C(prop[2]);
+              if(suggested && ![...fixed].some(n=>F(n)===F(suggested) || F(suggested).includes(F(n).split(' ').pop()))){
+                console.warn('[PLW V39] resposta tentou trocar direção:', suggested, '≠', [...fixed].join('/'));
+                t='Entendi o plano do Head Booker com '+[...fixed].join(' e ')+'. Vamos construir em cima disso — sem trocar o nome que ele já fechou.';
+              }
+            }
+          }
+        }
+      }catch(e){}
+      return oldFin.call(this,t);
+    };
+  }
+
+  try{
+    const m=S.bookingMeeting;
+    if(m){
+      (m.messages||[]).filter(x=>x.role==='user'&&x.text).slice(-6).forEach(x=>{
+        absorbDirection(m,x.text);
+      });
+    }
+  }catch(e){}
+
+  console.log('[PLW] V39 — direção do Head Booker é lei; vozes constroem em cima, não reformulam');
+})();
+</script>
+
+<!-- ===== PLW V40 — VOZES DISTINTAS + CONTINUIDADE REAL (não repetir / não recomeçar) =====
+     Bugs do transcript V39:
+     1) As 4 vozes começam com "Entendo o plano…" e dizem quase a mesma coisa.
+     2) Na 2ª pergunta do Head Booker, respondem como se fosse a 1ª (re-resumem tudo).
+     3) Lousa ainda mostra "Em aberto: adversário de MJF" com Ospreay x MJF já no card fechado.
+-->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V40__) return;
+  window.__PLW_MTG_V40__=true;
+
+  const C=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const clean=x=>String(x||'').replace(/\s+/g,' ').trim();
+  const LBL={jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA'};
+
+  function st(m){
+    try{return typeof meetingStateEnsure==='function'?meetingStateEnsure(m):(m.state||(m.state={}));}
+    catch(e){return m.state||(m.state={})}
+  }
+
+  /* ---- 1) Fecha "Em aberto" quando a luta do focal já está no card ---- */
+  function closedPairs(m){
+    const out=[];
+    try{
+      const s=st(m);
+      const add=ns=>{const a=(ns||[]).map(C).filter(Boolean); if(a.length>=2) out.push(a);};
+      for(const x of (s.cardMatches||[])) add(x.names||[]);
+      const p=String(m?.target||'').split(' — ')[0].trim();
+      if(p && typeof ppvPlan==='function'){
+        for(const x of (ppvPlan(p).card||[])) add(x.a||[]);
+      }
+      /* também do texto da lousa / debate locks */
+      const d=s.debate||{};
+      for(const x of (d.lockedMatches||[])) add(x.names||[]);
+    }catch(e){}
+    return out;
+  }
+
+  function clearOpenIfResolved(m){
+    if(!m) return;
+    const s=st(m);
+    const focal=C((s.open&&s.open.focal)||(s.debate&&s.debate.focal)||'');
+    if(!focal) return;
+    const pairs=closedPairs(m);
+    const resolved=pairs.some(p=>p.some(n=>F(n)===F(focal)||F(n).includes(F(focal).split(' ').pop())));
+    if(resolved){
+      if(s.open){ s.open.focal=''; s.open=null; }
+      if(s.debate){
+        if(F(s.debate.focal||'')===F(focal)) s.debate.focal='';
+        if(/advers[aá]rio de/i.test(s.debate.topic||'')) s.debate.topic='';
+      }
+      s.meetingTopicCandidates=[];
+      s.lastShortlist=[];
+      try{persist()}catch(e){}
+      console.log('[PLW V40] em aberto limpo —', focal, 'já tem luta no card');
+    }
+  }
+
+  /* ---- 2) Detecta se a fala atual é CONTINUAÇÃO de arco (não primeira direção) ---- */
+  function userTurns(m){
+    return (m.messages||[]).filter(x=>x.role==='user'&&x.text).map(x=>clean(x.text));
+  }
+
+  function isFollowUp(m, latest){
+    const turns=userTurns(m);
+    /* latest já pode estar ou não em messages; conta ≥2 falas de user no histórico recente */
+    const recent=turns.slice(-4);
+    if(recent.length>=2) return true;
+    const t=F(latest||'');
+    return /\b(mas a[ií]|e a[ií]|depois|ent[aã]o|e ele|e ela|continua|seguindo|agora|e volta|e [eé] draftado|fica careca|some)\b/.test(t);
+  }
+
+  function deltaOf(latest, previous){
+    /* o que há de novo na fala atual em relação à anterior */
+    const a=F(latest||''), b=F(previous||'');
+    if(!a) return latest||'';
+    const newBits=[];
+    const markers=['careca','some','desaparece','destroi','destrói','volta','draft','draftado','plwar','motion','ppv','hair','perde','perdedor'];
+    markers.forEach(k=>{ if(a.includes(k) && !b.includes(k)) newBits.push(k); });
+    if(newBits.length) return 'NOVO NESTA FALA: '+newBits.join(', ')+'. Texto completo: '+clean(latest);
+    return 'CONTINUAÇÃO do plano já aceito. Texto atual: '+clean(latest);
+  }
+
+  /* ---- 3) Tarefas distintas por persona (e diferentes na 1ª vs 2ª fala) ---- */
+  function personaTask(key, followUp, latest, prevUser, roundSoFar){
+    const delta=followUp?deltaOf(latest, prevUser):'';
+    const heard=roundSoFar?('Falas já ditas NESTA rodada (não repita o argumento):\n'+roundSoFar):'Ninguém falou ainda nesta rodada.';
+
+    if(!followUp){
+      /* primeira direção: cada um com ângulo próprio */
+      if(key==='jj') return [
+        'Você fala PRIMEIRO. Confirme em UMA frase curta que entendeu a decisão do Head Booker.',
+        'Depois dê SÓ o seu ângulo de booker: timing, proteção ou consequência de médio prazo.',
+        'NÃO escreva o plano inteiro de novo. NÃO use a abertura "Entendo o plano".',
+        'NÃO sugira outro lutador.',
+        heard
+      ].join('\n');
+      if(key==='tony') return [
+        'Você é Creative Room. O J.J. já falou — REAJA ao que ele disse, não ao plano do zero.',
+        'Acrescente UM detalhe de construção (promo, segmento de TV, imagem) que ele não citou.',
+        'Proibido copiar a estrutura da fala dele. Proibido "Entendo o plano".',
+        'NÃO troque os nomes decididos pelo Head Booker.',
+        heard
+      ].join('\n');
+      if(key==='gendo') return [
+        'Você é Gendo. REAJA às duas falas anteriores com um risco ou twist de execução (não de elenco).',
+        'Pode tensionar o plano ("o perigo é X"), mas NÃO troque o protagonista nem o resultado que o Head Booker fixou.',
+        'Proibido "Entendo o plano". Proibido repetir o que J.J. ou Creative já disseram.',
+        heard
+      ].join('\n');
+      return [
+        'Você é Analista. Feche a rodada com 1 sinal do SAVE (se existir) ou diga em uma frase o que a mesa ainda precisa PRODUZIR na TV.',
+        'Não reconte o arco. Não copie as outras vozes. Proibido "Entendo o plano".',
+        heard
+      ].join('\n');
+    }
+
+    /* follow-up: só o pedaço NOVO */
+    if(key==='jj') return [
+      'O Head Booker ACABOU DE ACRESCENTAR etapas ao arco. Não recomece do hair match.',
+      delta,
+      'Responda só ao que é NOVO (ex.: careca, sumiço, destruição da Motion, retorno, draft PLWAR).',
+      '1 frase de confirmação do acréscimo + 1 consequência de booking. Sem "Entendo o plano". Sem outro nome.',
+      heard
+    ].join('\n');
+    if(key==='tony') return [
+      'REAJA ao acréscimo do Head Booker e ao que o J.J. acabou de dizer sobre o NOVO trecho do arco.',
+      delta,
+      'Dê UM beat criativo só para a parte nova (sumiço / vandalismo na Motion / retorno / draft).',
+      'Não resuma o hair match de novo. Proibido "Entendo o plano".',
+      heard
+    ].join('\n');
+    if(key==='gendo') return [
+      'REAJA às falas desta rodada sobre o trecho NOVO do arco.',
+      delta,
+      'Aponte um risco de execução da etapa nova (draft, retorno, destruição) sem trocar nomes nem o desfecho.',
+      'Proibido "Entendo o plano". Proibido repetir J.J./Creative.',
+      heard
+    ].join('\n');
+    return [
+      'Analista: sobre o trecho NOVO apenas.',
+      delta,
+      'O que o save já sustenta e o que a TV ainda precisa mostrar para o draft/retorno fazer sentido.',
+      'Sem recontar o plano inteiro. Proibido "Entendo o plano".',
+      heard
+    ].join('\n');
+  }
+
+  /* ---- 4) Runner próprio: continua o V36, mas com tarefas distintas e follow-up ---- */
+  const prevRun=window.meetingRunPanel;
+  window.meetingRunPanel=async function(phase, userText){
+    const m=S.bookingMeeting;
+    if(!m) return prevRun&&prevRun.apply(this,arguments);
+    if(window.busy||window.__mtgRunning) {
+      try{ if(typeof toast==='function') toast('Espere as vozes terminarem.'); }catch(e){}
+      return;
+    }
+
+    clearOpenIfResolved(m);
+
+    const latest=clean(userText||'');
+    if(!latest) return prevRun&&prevRun.apply(this,arguments);
+
+    /* absorve direção se V39 existir */
+    try{
+      if(typeof absorbDirection==='function') absorbDirection(m, latest);
+    }catch(e){}
+
+    const turns=userTurns(m);
+    const prevUser=turns.filter(t=>F(t)!==F(latest)).slice(-1)[0]||turns.slice(-2,-1)[0]||'';
+    const followUp=isFollowUp(m, latest);
+
+    const token=m.runId=String(Date.now())+':v40:'+Math.random().toString(36).slice(2);
+    window.busy=true; window.__mtgRunning=true;
+
+    const keys=['jj','tony','gendo','hal'];
+    let roundSoFar='';
+
+    /* contexto save curto */
+    function saveBrief(){
+      try{
+        if(typeof memoryForModel==='function'){
+          const mem=memoryForModel(m);
+          if(mem) return 'HISTÓRICO DA REUNIÃO (não reinicie o assunto):\n'+mem.slice(-3500);
+        }
+      }catch(e){}
+      try{
+        if(typeof buildMeetingContext==='function') return String(buildMeetingContext()||'').slice(0,4000);
+      }catch(e){}
+      return '';
+    }
+
+    function dirBrief(){
+      try{
+        const s=st(m);
+        const list=s.userDirections||[];
+        if(!list.length) return '';
+        return 'DIREÇÃO JÁ FIXADA PELO HEAD BOOKER:\n'+list.slice(-6).map((d,i)=>(i+1)+'. '+d.text).join('\n')+
+          '\n(Não troque nomes nem o desfecho. Só execute/desenvolva.)';
+      }catch(e){return ''}
+    }
+
+    function sysFor(key){
+      const base={
+        jj:'Você é J.J. Purple, booker principal. Opinião curta e decisiva. Português do Brasil.',
+        tony:'Você é a Creative Room. Reage ao que acabou de ser dito e adiciona um beat criativo. Português do Brasil.',
+        gendo:'Você é Gendo Ikari, segundo booker. Tensiona a execução sem trocar o elenco decidido. Português do Brasil.',
+        hal:'Você é o Analista. Um fato do save ou um buraco a produzir na TV. Português do Brasil.'
+      }[key];
+      return [
+        base,
+        'REGRA: 2 a 4 frases. Tom de reunião humana, não relatório.',
+        'PROIBIDO começar com "Entendo o plano", "O plano é", "A rivalidade entre".',
+        'PROIBIDO repetir literalmente outra voz desta rodada.',
+        'PROIBIDO sugerir outro lutador no lugar dos nomes que o Head Booker já fixou.',
+        'Passado = só o save. Futuro = booking em cima da direção dele.',
+        followUp?'MODO CONTINUAÇÃO: o Head Booker acrescentou etapas. Fale só do que é novo; não reconte o início do arco.':'MODO DIREÇÃO INICIAL: confirme curto e acrescente um ângulo seu.'
+      ].join('\n');
+    }
+
+    try{
+      const hist=saveBrief();
+      const dir=dirBrief();
+
+      for(const key of keys){
+        if(S.bookingMeeting!==m || m.runId!==token) break;
+
+        const msg={role:'persona',persona:key,text:'…',id:Date.now()+m.messages.length+Math.random()};
+        m.messages.push(msg);
+        try{persist(); if(typeof tab!=='undefined'&&tab==='meeting'&&typeof render==='function') render()}catch(e){}
+
+        const task=personaTask(key, followUp, latest, prevUser, roundSoFar);
+        const prompt=[
+          'MENSAGEM ATUAL DO HEAD BOOKER:', latest,
+          '',
+          dir,
+          '',
+          hist,
+          '',
+          'SUA TAREFA AGORA:',
+          task,
+          '',
+          'Responda somente como '+LBL[key]+'. Sem cabeçalho com seu nome.'
+        ].filter(Boolean).join('\n');
+
+        let answer='';
+        try{
+          await bookerSample(prompt,{
+            engine:K.engine,
+            system:sysFor(key),
+            maxTok:520,
+            onText:x=>{
+              if(m.runId!==token) return;
+              answer=String(x.text||'');
+              /* tira aberturas proibidas se o modelo insistir */
+              answer=answer.replace(/^\s*(entendo o plano[:\s,—-]*)/i,'');
+              answer=answer.replace(/^\s*((j\.?j\.?\s*purple|creative room|gendo ikari|analista)\s*:\s*)/i,'');
+              if(typeof removeRepeatedResponseText==='function') answer=removeRepeatedResponseText(answer);
+              msg.text=answer||'…';
+              try{if(typeof tab!=='undefined'&&tab==='meeting'&&typeof render==='function') render()}catch(e){}
+            }
+          });
+        }catch(e){ console.warn('[PLW V40]', key, e); }
+
+        answer=clean(answer||msg.text);
+        answer=answer.replace(/^\s*(entendo o plano[:\s,—-]*)/i,'').trim();
+
+        /* anti-cópia grosseira da rodada */
+        if(roundSoFar && answer.length>40){
+          const prevLines=roundSoFar.split('\n').map(l=>F(l.replace(/^[^:]+:\s*/,'')));
+          const mine=F(answer);
+          if(prevLines.some(p=>p.length>50 && (mine.includes(p.slice(0,80)) || p.includes(mine.slice(0,80))))){
+            answer= key==='tony'
+              ? 'No trecho novo eu focaria num beat visual de TV que o J.J. não citou — algo que marque a virada sem reexplicar o arco.'
+              : key==='gendo'
+              ? 'O risco da etapa nova é a plateia achar reset barato; precisa de uma marca clara na saída para o retorno não parecer desculpa.'
+              : key==='hal'
+              ? 'No save ainda falta um beat que justifique a mudança de brand; a TV tem de produzir isso antes do draft.'
+              : 'Fechado o acréscimo: a mesa executa o que você mandou e mede a reação na semana seguinte.';
+          }
+        }
+
+        if(!answer || answer==='…'){
+          answer= followUp
+            ? (key==='jj'
+              ? 'O acréscimo fecha o arco: a queda pública vira combustível do retorno e do draft, sem reabrir o desafiante.'
+              : key==='tony'
+              ? 'Eu venderia o sumiço com um rastro na Motion — vandalismo ou promo crua — para o retorno no PPV já chegar carregado.'
+              : key==='gendo'
+              ? 'Draft só funciona se a destruição da Motion parecer consequência real, não intervalo vazio.'
+              : 'O save ainda não tem o draft; a TV precisa mostrar o trabalho que justifica a ida à PLWAR.')
+            : (key==='jj'
+              ? 'Hair match com ele perdendo fecha a rivalidade com custo real; a TV antes tem de vender o desespero de Ospreay em aceitar só isso.'
+              : key==='tony'
+              ? 'Eu colocaria uma promo em que Ospreay recusa combate limpo ao vivo, para o hair vs hair parecer única saída, não gimmick.'
+              : key==='gendo'
+              ? 'O perigo é o público ler a derrota dele como rebaixamento barato; o preço do cabelo tem de doer nos dois.'
+              : 'Há tensão registrada entre os dois no save; o hair match ainda é construção futura a ser produzida na TV.');
+        }
+
+        msg.text=answer;
+        try{
+          if(typeof archiveVisiblePersona==='function') archiveVisiblePersona(m,msg);
+          if(typeof meetingTrackPersonaIdeas==='function') meetingTrackPersonaIdeas(m);
+        }catch(e){}
+
+        roundSoFar += (roundSoFar?'\n':'') + LBL[key]+': '+msg.text;
+        try{persist(); if(typeof tab!=='undefined'&&tab==='meeting'&&typeof render==='function') render()}catch(e){}
+      }
+
+      clearOpenIfResolved(m);
+    } finally {
+      window.busy=false; window.__mtgRunning=false;
+      try{persist(); if(typeof tab!=='undefined'&&tab==='meeting'&&typeof render==='function') render()}catch(e){}
+    }
+  };
+
+  /* limpa lousa agora se a reunião atual já tem Ospreay x MJF no card */
+  try{ if(S.bookingMeeting) clearOpenIfResolved(S.bookingMeeting); }catch(e){}
+
+  console.log('[PLW] V40 — vozes distintas + follow-up só no trecho novo + limpa "em aberto" se luta já está no card');
+})();
+</script>
+
+<!-- ===== PLW V41 — PERSONALIDADES REAIS, NÃO PAPAGAIOS =====
+     Causa do "Entendo o plano" em todo mundo: o wrapper V39 do bookerSample
+     injetava a MESMA tarefa ("confirme o plano + uma consequência") em todas as vozes.
+     V40 diferenciava o prompt, mas o V39 re-homogeneizava por cima.
+     V41: remove essa homogeneização, força estilo por persona, corta abertura robótica.
+-->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V41__) return;
+  window.__PLW_MTG_V41__=true;
+
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const clean=x=>String(x||'').replace(/\s+/g,' ').trim();
+
+  /* Estilo de fala — o modelo imita o TOM, não o conteúdo de exemplo */
+  const VOICE={
+    jj:[
+      'Você é J.J. Purple: booker parceiro, direto, informal, às vezes cortante.',
+      'Fala como quem está na sala: "eu fecharia assim", "isso segura", "esse preço eu pago".',
+      'Não é relatório. Não enumera. Uma opinião clara e um porquê curto.',
+      'Nunca comece com "Entendo o plano" nem "A rivalidade entre".'
+    ].join(' '),
+    tony:[
+      'Você é Creative Room: animado com imagem, promo e momento de TV.',
+      'Fala de cena: o que o público VÊ, o silêncio, o corte de cabelo, o vandalismo, o retorno.',
+      'Pode ser mais colorido que os outros, mas sem virar roteiro de três atos.',
+      'Reaja ao que o J.J. acabou de dizer. Nunca comece com "Entendo o plano".'
+    ].join(' '),
+    gendo:[
+      'Você é Gendo Ikari: segundo booker, cético, gosta de apontar o risco sujo.',
+      'Tom mais seco: "o problema é X", "se fizer Y barato, a plateia come".',
+      'Pode discordar da execução (não do elenco que o Head Booker já fixou).',
+      'Nunca comece com "Entendo o plano". Não repita o argumento do J.J. nem da Creative.'
+    ].join(' '),
+    hal:[
+      'Você é o Analista: frio, curto, ancorado no que o save mostra ou no que ainda falta na TV.',
+      'Sem poesia. Se tiver número/fato no contexto, use um. Se não tiver, diga o buraco em uma frase.',
+      'Você não inventa segmento de ataque. Nunca comece com "Entendo o plano".'
+    ].join(' ')
+  };
+
+  function detectKey(prompt, system){
+    const s=String(prompt||'')+'\n'+String(system||'');
+    if(/J\.J\. PURPLE|J\.J\. Purple|persona: jj|\bjj\b.*booker principal/i.test(s) && /SUA TAREFA|Responda somente como J/i.test(s)) return 'jj';
+    if(/CREATIVE ROOM|Creative Room/i.test(s) && /SUA TAREFA|Responda somente como/i.test(s)) return 'tony';
+    if(/GENDO IKARI|Gendo Ikari/i.test(s) && /SUA TAREFA|Responda somente como/i.test(s)) return 'gendo';
+    if(/ANALISTA|Analista/i.test(s) && /SUA TAREFA|Responda somente como/i.test(s)) return 'hal';
+    /* fallback por system V40 */
+    if(/J\.J\. Purple, booker principal/i.test(s)) return 'jj';
+    if(/Creative Room\. Reage/i.test(s)) return 'tony';
+    if(/Gendo Ikari, segundo booker/i.test(s)) return 'gendo';
+    if(/o Analista\. Um fato/i.test(s)) return 'hal';
+    return window.__mtgKey||'';
+  }
+
+  /* Remove blocos do V39 que forçam todo mundo a "confirmar o plano" do mesmo jeito */
+  function stripHomogenizers(prompt){
+    let p=String(prompt||'');
+    p=p.replace(/=== TAREFA DESTA RODADA \(V39\) ===[\s\S]*?(?====|\n\nResponda|$)/g,'');
+    p=p.replace(/Responda em 2–5 frases: confirme que entendeu o plano[\s\S]*?(?=\n\n|$)/gi,'');
+    p=p.replace(/HARD RULE V39:[\s\S]*?(?=\n\n|$)/g,'');
+    /* enxuga DIREÇÃO TRAVADA repetida se aparecer 2x */
+    const marker='=== DIREÇÃO TRAVADA DO HEAD BOOKER';
+    const i1=p.indexOf(marker);
+    if(i1>=0){
+      const i2=p.indexOf(marker, i1+10);
+      if(i2>=0) p=p.slice(0,i2)+p.slice(i2).replace(/=== DIREÇÃO TRAVADA DO HEAD BOOKER[\s\S]*?(?==== MENSAGEM|=== SUA TAREFA|MENSAGEM ATUAL|$)/,'');
+    }
+    return p;
+  }
+
+  function scrubAnswer(text, key, roundTexts){
+    let t=clean(text);
+    /* corta aberturas de papagaio */
+    t=t.replace(/^(entendo o plano[:\s,—.–-]*)+/i,'');
+    t=t.replace(/^(o plano [ée][:\s,—.–-]*)+/i,'');
+    t=t.replace(/^(a rivalidade entre[^.]{0,80}\.\s*)/i,'');
+    t=t.replace(/^(compreendo[:\s,—.–-]*)+/i,'');
+    t=t.replace(/^\s*((j\.?j\.?\s*purple|creative room|gendo ikari|analista)\s*:\s*)/i,'');
+    t=t.trim();
+
+    /* se ainda ficou genérico demais e idêntico a outra voz */
+    const mine=F(t);
+    if(roundTexts&&roundTexts.length&&mine.length>60){
+      for(const prev of roundTexts){
+        const p=F(prev);
+        if(p.length<40) continue;
+        /* overlap alto de início */
+        if(mine.slice(0,100)===p.slice(0,100) || (mine.includes(p.slice(0,70))||p.includes(mine.slice(0,70)))){
+          t= fallback(key);
+          break;
+        }
+      }
+    }
+    if(!t || /^entendo/i.test(t)) t=fallback(key);
+    return t;
+  }
+
+  function fallback(key){
+    if(key==='jj') return 'Eu pago o preço do hair match: ele sai raspado, some e a Motion sente o buraco — o draft pra PLWAR só cola se a saída doer de verdade.';
+    if(key==='tony') return 'Quero a câmera no chão da Motion depois que ele some: rastro, promo crua, silêncio. Quando voltar no PPV, o draft já chega com cheiro de renascimento, não de reset.';
+    if(key==='gendo') return 'Se o sumiço for só intervalo vazio, o draft parece prêmio. Tem que parecer consequência — senão a plateia lê como férias.';
+    return 'No save a queda e o draft ainda são futuro: a TV precisa mostrar o trabalho que justifica a ida pra PLWAR, não só o corte de cabelo.';
+  }
+
+  /* Intercepta bookerSample: tira homogeneização V39 e aplica voz */
+  const prevSample=window.bookerSample;
+  if(typeof prevSample==='function'){
+    window.bookerSample=async function(prompt, opts){
+      const inMeeting=!!S.bookingMeeting && (window.__mtgRunning||window.busy||/MENSAGEM ATUAL DO HEAD BOOKER|DIREÇÃO TRAVADA|SUA TAREFA AGORA/i.test(String(prompt||'')));
+      let p=String(prompt||'');
+      let sys=String((opts&&opts.system)||'');
+
+      if(inMeeting){
+        p=stripHomogenizers(p);
+        /* também tira o hard block idêntico do V38 se estiver empilhado de forma a forçar confirmação */
+        p=p.replace(/Mesmo quando a pergunta pede uma sugestão, a resposta é uma PROPOSTA\.[\s\S]{0,400}/g,'');
+
+        const key=detectKey(p, sys);
+        if(key && VOICE[key]){
+          window.__mtgKey=key;
+          sys=VOICE[key]+'\n\n'+sys
+            .replace(/HARD RULE V39:[\s\S]*$/,'')
+            .replace(/confirme que entendeu o plano[\s\S]{0,200}/gi,'');
+          sys+='\n\nESTILO OBRIGATÓRIO: 2 a 4 frases, natural, como gente na sala. Proibido "Entendo o plano". Proibido repetir a fala anterior da mesa.';
+        }
+
+        const userOnText=opts&&opts.onText;
+        const roundBucket=(window.__mtgRoundTexts||(window.__mtgRoundTexts=[]));
+        const wrappedOnText=userOnText?function(c){
+          let text=String(c&&c.text||'');
+          text=scrubAnswer(text, key, roundBucket);
+          return userOnText({text:text});
+        }:undefined;
+
+        const result=await prevSample.call(this, p, Object.assign({}, opts||{}, {system:sys, onText:wrappedOnText||userOnText}));
+        return result;
+      }
+      return prevSample.apply(this, arguments);
+    };
+  }
+
+  /* No runner V40, zera o bucket de rodada a cada meetingRunPanel */
+  const prevRun=window.meetingRunPanel;
+  if(typeof prevRun==='function'){
+    window.meetingRunPanel=async function(phase, userText){
+      window.__mtgRoundTexts=[];
+      const result=await prevRun.apply(this, arguments);
+      window.__mtgRoundTexts=[];
+      return result;
+    };
+  }
+
+  /* Reforça finalizeText: nunca deixar "Entendo o plano" passar na reunião */
+  const prevFin=window.finalizeText;
+  if(typeof prevFin==='function'){
+    window.finalizeText=function(t){
+      let x=t;
+      if(S.bookingMeeting && (window.__mtgRunning||window.busy)){
+        x=scrubAnswer(String(t||''), window.__mtgKey||'', window.__mtgRoundTexts||[]);
+        if(window.__mtgRoundTexts && x) window.__mtgRoundTexts.push(x);
+      }
+      return prevFin.call(this, x);
+    };
+  }
+
+  console.log('[PLW] V41 — personalidades distintas; morto o "Entendo o plano" homogêneo do V39');
+})();
+</script>
+
+<!-- ===== PLW V42 — REUNIÃO HUMANA DE VERDADE =====
+     Pedido do usuário: "ELES TEM QUE SEREM ~HUMANOS~"
+     - português falado, não relatório
+     - cada voz com opinião própria e reage à anterior
+     - proíbe ecoar frase/imagem da voz de cima
+     - garante as 4 falas; fallbacks também soam humanos e diferentes
+-->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V42__) return;
+  window.__PLW_MTG_V42__=true;
+
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const clean=x=>String(x||'').replace(/\s+/g,' ').trim();
+  const LBL={jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA'};
+
+  const HUMAN_SYS={
+    jj:[
+      'Você é J.J. Purple numa reunião de booking da PLW.',
+      'Fale como amigo de trabalho: informal, português brasileiro de verdade ("cara", "fechou", "eu iria", "isso cola").',
+      '2 a 4 frases no máximo. Opinião primeiro, explicação depois se precisar.',
+      'Não escreva como IA. Não resuma o plano do chefe. Não diga "entendi o plano" nem "entendi:".',
+      'Se o Head Booker já decidiu nomes e desfecho, você aceita e fala de timing/proteção/preço — sem trocar o elenco.'
+    ].join(' '),
+    tony:[
+      'Você é a Creative Room na mesma reunião.',
+      'Fale animado, de imagem e sensação: o que a câmera pega, o silêncio, o retorno.',
+      'REAGA ao que o J.J. acabou de falar — concorde com um detalhe NOVO ou puxe outra imagem. Nunca repita a frase dele.',
+      'Informal. 2 a 4 frases. Sem "entendi o plano". Sem listar o arco inteiro de novo.'
+    ].join(' '),
+    gendo:[
+      'Você é Gendo Ikari, o cara chato da mesa que aponta o furo.',
+      'Tom seco, às vezes sarcástico leve. "Olha, o risco é...", "se fizer barato...".',
+      'Pode discordar da EXECUÇÃO (timing, quanto tempo some, como vende o draft), nunca dos nomes que o Head Booker fixou.',
+      'Não copie J.J. nem Creative. Informal. 2 a 4 frases. Sem "entendi".'
+    ].join(' '),
+    hal:[
+      'Você é o Analista: o último a falar, voz calma e seca.',
+      'Uma observação útil: o que o save já tem ou o que a TV ainda não mostrou.',
+      'Sem emoção de promo. Sem repetir as imagens que os outros inventaram.',
+      '2 a 3 frases. Informal o suficiente pra parecer gente ("no save...", "ainda não tem..."). Sem "entendi o plano".'
+    ].join(' ')
+  };
+
+  const FALLBACK={
+    jj:[
+      'Cara, hair match com ele perdendo fecha a rivalidade com custo de verdade. Eu não mexia no elenco.',
+      'Fechou: ele sai raspado e a Motion sente falta. O draft só cola se a saída doer.',
+      'Eu compro o arco inteiro. Só não deixa o sumiço parecer férias — tem que sumir sujo.'
+    ],
+    tony:[
+      'Eu ia de câmera no vazio da Motion depois que ele some. Silêncio pesado, sem speech bonito.',
+      'O corte do cabelo eu venderia feio, no chão do ringue — não como meme, como humilhação.',
+      'Quando voltar no PPV, eu não explicava demais. Deixava a plateia gritar e o draft cair em cima.'
+    ],
+    gendo:[
+      'O perigo é o draft parecer prêmio de consolação. Se o vandalismo na Motion for fraco, a plateia não compra.',
+      'Some tempo demais e esfriou; some tempo de menos e parece intervalo. Esse timing é o que me preocupa.',
+      'Ospreay não pode sair cheio de razão demais. Se ficar herói limpo, o preço do cabelo não cola.'
+    ],
+    hal:[
+      'No save a rivalidade tem base; hair, sumiço e draft ainda são construção de TV.',
+      'Ainda não tem registro de mudança de brand. Isso a mesa precisa produzir antes do PPV.',
+      'Do que está no save, o confronto entre os dois já existe. O resto é o que vocês vão gravar daqui pra frente.'
+    ]
+  };
+
+  function pickFallback(key, used){
+    const list=FALLBACK[key]||FALLBACK.jj;
+    const free=list.find(x=>!(used||[]).some(u=>F(u).includes(F(x).slice(0,40))));
+    return free||list[Math.floor(Math.random()*list.length)];
+  }
+
+  function scrub(text, key, used){
+    let t=clean(text||'');
+    t=t.replace(/^(entendi(?:\s+o\s+plano)?[:\s,—.–-]*)+/i,'');
+    t=t.replace(/^(entendo(?:\s+o\s+plano)?[:\s,—.–-]*)+/i,'');
+    t=t.replace(/^(compreendo[:\s,—.–-]*)+/i,'');
+    t=t.replace(/^(o plano [ée][:\s,—.–-]*)+/i,'');
+    t=t.replace(/^(a rivalidade entre[^.]{0,100}\.\s*)/i,'');
+    t=t.replace(/^\s*(j\.?j\.?\s*purple|creative room|gendo ikari|analista)\s*:\s*/i,'');
+    /* remove aspas de grito inventado repetido */
+    t=t.trim();
+    if(!t || t.length<12) return pickFallback(key, used);
+
+    const mine=F(t);
+    for(const u of (used||[])){
+      const p=F(u);
+      if(p.length<30) continue;
+      /* eco forte */
+      if(mine.slice(0,70)===p.slice(0,70)) return pickFallback(key, used);
+      if(p.includes(mine.slice(0,55)) || mine.includes(p.slice(0,55))) return pickFallback(key, used);
+      /* mesma imagem citada */
+      const imgs=['careca como pano','video de reacao','você vai lutar de novo','protesto silencioso','fim de era'];
+      for(const img of imgs){
+        if(mine.includes(F(img)) && p.includes(F(img))) return pickFallback(key, used);
+      }
+    }
+    return t;
+  }
+
+  function buildHumanPrompt(key, latest, followUp, prevUser, roundSoFar, dirBlock, hist){
+    const task= followUp
+      ? (key==='jj'
+          ? 'O chefe ACABOU de acrescentar o arco (careca/some/destrói/volta/draft). Não reconte o hair match. Dê sua opinião só sobre esse acréscimo, como booker na sala.'
+          : key==='tony'
+          ? 'J.J. já falou. Reaja com UMA ideia de cena/imagem sobre o trecho NOVO (sumiço, Motion destruída, retorno, draft). Não repita a frase dele.'
+          : key==='gendo'
+          ? 'Aponte o risco da etapa NOVA. Pode cutucar a execução. Não troque os nomes. Não copie os outros.'
+          : 'Fato ou buraco: o que o save já segura e o que ainda precisa aparecer na TV pro draft fazer sentido. Sem poesia.')
+      : (key==='jj'
+          ? 'O chefe fechou rivalidade + hair match + quem perde. Opine como booker: você compra? qual o preço? Sem resumir o pedido dele.'
+          : key==='tony'
+          ? 'J.J. já falou. Acrescente um detalhe de TV/promo que ele não disse. Sem repetir.'
+          : key==='gendo'
+          ? 'Onde esse desfecho pode quebrar se for mal executado? Sem trocar elenco.'
+          : 'O que o save já mostra entre esses dois e o que ainda é invenção de TV.');
+
+    return [
+      HUMAN_SYS[key],
+      '',
+      'HEAD BOOKER acabou de dizer:',
+      '"'+latest+'"',
+      '',
+      dirBlock||'',
+      '',
+      roundSoFar ? ('Já falaram nesta rodada:\n'+roundSoFar+'\nNão repita o argumento nem a imagem deles.') : 'Você fala primeiro nesta rodada.',
+      '',
+      followUp && prevUser ? ('Fala anterior do chefe (já absorvida, não reconte):\n"'+prevUser.slice(0,300)+'"') : '',
+      '',
+      hist ? hist.slice(0,2500) : '',
+      '',
+      'SUA FALA AGORA ('+LBL[key]+'):',
+      task,
+      'Responda só com a fala, sem seu nome na frente, sem bullet, sem "como IA".'
+    ].filter(Boolean).join('\n');
+  }
+
+  function dirBlock(m){
+    try{
+      const s=(typeof meetingStateEnsure==='function'?meetingStateEnsure(m):m.state)||{};
+      const list=s.userDirections||[];
+      if(!list.length) return '';
+      return 'Decisões que o chefe JÁ travou (não reabra):\n'+list.slice(-5).map(d=>'- '+d.text).join('\n');
+    }catch(e){return ''}
+  }
+
+  function userTurns(m){
+    return (m.messages||[]).filter(x=>x.role==='user'&&x.text).map(x=>clean(x.text));
+  }
+
+  function isFollowUp(m, latest){
+    const turns=userTurns(m);
+    if(turns.length>=2) return true;
+    return /\b(mas a[ií]|e a[ií]|depois|ent[aã]o|continua|agora|fica careca|some|destroi|draft)\b/i.test(latest||'');
+  }
+
+  /* Runner humano — substitui o painel da reunião */
+  window.meetingRunPanel=async function(phase, userText){
+    const m=S.bookingMeeting;
+    if(!m) return;
+    if(window.busy||window.__mtgRunning){
+      try{toast&&toast('Espere as vozes terminarem.')}catch(e){}
+      return;
+    }
+
+    const latest=clean(userText||'');
+    if(!latest) return;
+
+    try{
+      if(typeof absorbDirection==='function') absorbDirection(m, latest);
+    }catch(e){}
+
+    const turns=userTurns(m);
+    const prevUser=turns.filter(t=>F(t)!==F(latest)).slice(-1)[0]||'';
+    const followUp=isFollowUp(m, latest);
+
+    const token=m.runId=String(Date.now())+':v42';
+    window.busy=true; window.__mtgRunning=true;
+    window.__mtgRoundTexts=[];
+
+    const keys=['jj','tony','gendo','hal'];
+    let roundSoFar='';
+    const used=[];
+
+    let hist='';
+    try{
+      if(typeof memoryForModel==='function') hist='Memória da reunião:\n'+memoryForModel(m).slice(-2800);
+    }catch(e){}
+
+    const dir=dirBlock(m);
+
+    try{
+      for(const key of keys){
+        if(S.bookingMeeting!==m || m.runId!==token) break;
+
+        const msg={role:'persona',persona:key,text:'…',id:Date.now()+Math.random()};
+        m.messages.push(msg);
+        try{persist(); if(tab==='meeting') render()}catch(e){}
+
+        window.__mtgKey=key;
+        const prompt=buildHumanPrompt(key, latest, followUp, prevUser, roundSoFar, dir, hist);
+
+        let answer='';
+        try{
+          /* chama o sample "cru" se existir unwrap; senão bookerSample */
+          const sample=window.bookerSample;
+          await sample(prompt,{
+            engine:K.engine,
+            system:HUMAN_SYS[key]+'\nFale como humano na sala. 2-4 frases. Proibido "entendi/entendo o plano".',
+            maxTok:420,
+            onText:c=>{
+              if(m.runId!==token) return;
+              answer=scrub(c.text, key, used);
+              msg.text=answer||'…';
+              try{if(tab==='meeting') render()}catch(e){}
+            }
+          });
+        }catch(e){ console.warn('[PLW V42]', key, e); }
+
+        answer=scrub(answer||msg.text, key, used);
+        if(!answer || answer==='…') answer=pickFallback(key, used);
+
+        msg.text=answer;
+        used.push(answer);
+        window.__mtgRoundTexts=used.slice();
+
+        try{
+          if(typeof archiveVisiblePersona==='function') archiveVisiblePersona(m, msg);
+          if(typeof meetingTrackPersonaIdeas==='function') meetingTrackPersonaIdeas(m);
+        }catch(e){}
+
+        roundSoFar += (roundSoFar?'\n':'') + LBL[key]+': '+answer;
+        try{persist(); if(tab==='meeting') render()}catch(e){}
+      }
+    } finally {
+      window.busy=false; window.__mtgRunning=false;
+      try{persist(); if(tab==='meeting') render()}catch(e){}
+    }
+  };
+
+  console.log('[PLW] V42 — reunião humana: informal, 4 vozes distintas, sem eco, sem "entendi o plano"');
+})();
+</script>
+
+<!-- ===== PLW V43 — BOOKERS ESPERTOS, HUMANOS, COM IDEIA =====
+     Pedido: humanizados, espertos, dão ideias, concordam quando faz sentido.
+     Quebra fórmulas: "a câmera pega", "o risco é", "no save ainda não tem".
+     Podem concordar de verdade e empurrar a conversa pra frente.
+-->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V43__) return;
+  window.__PLW_MTG_V43__=true;
+
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const clean=x=>String(x||'').replace(/\s+/g,' ').trim();
+  const LBL={jj:'J.J. PURPLE',tony:'CREATIVE ROOM',gendo:'GENDO IKARI',hal:'ANALISTA'};
+
+  const SYS={
+    jj:'Você é J.J. Purple, booker veterano da PLW, 40 e poucos anos, prático e decidido. Fala curto, em gíria de bastidor brasileira (fechou, compro, isso vende, não cola). Você DECIDE: abre com o veredito (compro / não compro / compro com ajuste) e entrega UMA decisão de calendário com brand e semana. Não descreve cena, não faz análise de dados, não faz poesia. No máximo 2 frases.',
+    tony:'Você é o Creative Room, o criativo sonhador da sala, empolgado e visual. Sempre fala em primeira pessoa propondo UMA cena concreta de TV ("e se a gente…", "imagina…"): quem entra, o que faz, o que a plateia sente. Não decide calendário, não fala de risco nem de dados. 2 a 3 frases, tom animado, com imagem específica (nada de "silêncio dramático" ou "olhar frio").',
+    gendo:'Você é Gendo Ikari, o booker cínico e desconfiado. Seco, direto, ranzinza, meio sarcástico. Sua função é apontar o que pode dar errado ou custar caro e cobrar uma resposta: concorde só pela metade e termine com uma pergunta ou ressalva dura. Nunca propõe cena nem semana; nunca repete a ideia dos outros. 1 a 2 frases curtas.',
+    hal:'Você é o Analista, frio, metódico e literal. Só fala de fatos do save (quem é de qual brand, título, resultados recentes, calendário) ou diz claramente "isso o save não mostra". Não inventa passado e não opina sobre criatividade. Tom neutro de planilha. 1 a 3 frases, sempre começando por um fato ou por "o save não mostra".'
+  };
+
+  const FORBIDDEN_OPEN=/^(entendi|entendo|compreendo|o risco [ée]|a c[aâ]mera pega|no save,? ainda n[aã]o|a rivalidade entre)/i;
+
+  const IDEAS={
+    jj:[
+      'Fechou. Eu compraria e já botava duas semanas de TV só pra Ospreay recusar combate limpo ao vivo — aí o hair match parece única saída, não gimmick.',
+      'Cara, eu compro o arco inteiro. Só tratava o sumiço como problema da Motion, não como férias dele, senão o draft fica premiado.',
+      'Concordo com o desfecho. Eu usaria o pós-luta pra ele sumir no meio do caos, sem promo de despedida bonita.'
+    ],
+    tony:[
+      'Concordo com o J.J. Eu ainda botaria um segmento de bastidor em que a locker da Motion discute o buraco que ele deixou — sem ele aparecer.',
+      'Gostei. E se no retorno o draft for anunciado no meio da ovação, sem speech longo? Deixa a plateia completar a história.',
+      'Eu somaria um detalhe: ele volta com visual diferente, mas a primeira coisa que faz é mirar alguém da PLWAR, não revisitar Ospreay na hora.'
+    ],
+    gendo:[
+      'Também compro. O que não pode é o vandalismo na Motion parecer meme; tem que custar ranking ou título de alguém da casa.',
+      'Ok o arco. Eu só não deixava ele sumir tempo demais — esfria. Duas semanas sujas e volta no PPV tá no ponto.',
+      'Concordo no hair. Só não transformem Ospreay em santo: ele tem que parecer obcecado, senão o preço do cabelo não cola.'
+    ],
+    hal:[
+      'Entre os dois o save já tem tensão de verdade. Hair, sumiço e draft ainda são TV — e isso é exatamente o trabalho da mesa agora.',
+      'Concordo com a direção. O que falta no registro é a mudança de brand; a TV precisa mostrar o "porquê" antes do anúncio do draft.',
+      'Do que está no save, o confronto aguenta o peso. O resto é construir o custo da derrota pra plateia acompanhar o retorno.'
+    ]
+  };
+
+  function pick(key, used){ return ''; } /* sem fala enlatada: se a IA não deu nada útil, a voz fica calada */
+
+  function grams(t){const w=F(t).split(' ').filter(x=>x.length>3);const g=new Set();for(let i=0;i<w.length;i++){g.add(w[i]);if(i+1<w.length)g.add(w[i]+'_'+w[i+1])}return g}
+  function similar(a,b){const A=grams(a),B=grams(b);if(!A.size||!B.size)return false;let c=0;A.forEach(x=>{if(B.has(x))c++});return c/Math.min(A.size,B.size)>=0.45}
+  
+  /* ===== V46: contexto de adversário (veto, brand, nomes distintos, fatos reais) ===== */
+  let CTX=null;
+  const CN=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'').trim()):String(n||'').trim();
+  const VETO_W=/\b(vet(ei|o|ou|ado|ar|amos)|sem ser|n[aãÃ]o (pode|quero|rola|serve|d[aá])|esquece|descarta|fora)\b/i;
+  const OPP_Q=/(o que (podemos|posso|vamos|d[aá]|fazer)|fazer com|contra quem|oponente|advers[aá]rio|desafiante|quem (enfrenta|luta|pega)|nome diferente|cada um|outro nome|algu[eé]m d[ea]|tem que ser|\b(da|do) (plwar|motion|show off)\b)/i;
+  const HAIR_RX=/cabelo|careca|raspad|\bhair\b/i;
+  const BRLBL={'PLWAR':'PLWAR','MOTION':'PLW MOTION','SHOW OFF':'PLW SHOW OFF'};
+  const LIM={jj:2,tony:3,gendo:2,hal:3};
+  const MAXTOK={jj:150,tony:260,gendo:170,hal:230};
+  function rosterIn(t){try{return resolveRosterMentions(t).map(CN)}catch(e){return[]}}
+  function clipS(t,key){const ss=String(t).replace(/\*+/g,'').split(/(?<=[.!?])\s+/);return ss.slice(0,LIM[key]||3).join(' ').trim()}
+  function mentionsName(text,name){return rosterIn(text).includes(name)}
+  function buildCtx(m,latest){
+    const users=(m.messages||[]).filter(x=>x.role==='user'&&x.text).map(x=>clean(x.text));
+    if(users[users.length-1]!==latest) users.push(latest);
+    const vet=new Set();
+    try{(meetingStateEnsure(m).rejectedIdeas||[]).forEach(r=>(r.names||[]).forEach(n=>vet.add(CN(n))))}catch(e){}
+    (Array.isArray(m.vetoed)?m.vetoed:[]).forEach(n=>vet.add(n));
+    users.forEach(u=>{ if(VETO_W.test(u)) rosterIn(u).forEach(n=>vet.add(n)); });
+    m.vetoed=[...vet];
+    let focal='';
+    for(let i=users.length-1;i>=0&&!focal;i--){
+      if(VETO_W.test(users[i])) continue;
+      focal=rosterIn(users[i]).find(n=>!vet.has(n))||'';
+    }
+    const pair=/\s(x|vs\.?|versus|contra)\s/i.test(latest)&&rosterIn(latest).length>=2;
+    const opp=!!focal&&!pair&&(OPP_Q.test(latest)||VETO_W.test(latest));
+    const ctx={users,vet,focal,opp,assign:{},brand:'',brandLbl:'',facts:'',allowed:new Set(),hairOk:HAIR_RX.test(users.join(' ')+' '+dirOf(m))};
+    if(!opp) return ctx;
+    const br=bk((S.roster[focal]||{}).brand);ctx.brand=br;ctx.brandLbl=BRLBL[br]||br||'a mesma brand';
+    let pool=Object.keys(S.roster||{}).filter(n=>{const k=CN(n);return k!==focal&&!vet.has(k)&&bk((S.roster[n]||{}).brand)===br&&!bkOut(n)}).map(CN);
+    pool=[...new Set(pool)];
+    pool.forEach(n=>ctx.allowed.add(n)); ctx.allowed.add(focal);
+    const top=pool.slice().sort((a,b)=>(+(S.roster[b]||{}).pop||0)-(+(S.roster[a]||{}).pop||0)).slice(0,9);
+    for(let i=top.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[top[i],top[j]]=[top[j],top[i]]}
+    ctx.assign={jj:top[0],tony:top[1],gendo:top[2]};
+    let all=[];try{all=ML()}catch(e){}
+    const res=n=>all.filter(x=>sd(x,n)).slice(-3).map(x=>({w:'venceu',l:'perdeu',d:'empatou'}[sd(x,n)]||'lutou')+' em '+(x.ev||'evento')).join('; ')||'sem lutas registradas';
+    const ttl=n=>Object.entries(S.titles||{}).filter(([t,o])=>String((o||{}).champ||'').includes(n)).map(x=>x[0]).join(', ');
+    const lines=[focal,...Object.values(ctx.assign).filter(Boolean)].map(n=>'- '+n+' ['+ctx.brandLbl+']: últimas lutas: '+res(n)+(ttl(n)?'; campeão do '+ttl(n):''));
+    const h2h=Object.values(ctx.assign).filter(Boolean).map(n=>{const k=all.filter(x=>sd(x,focal)&&sd(x,n));return k.length?focal+' x '+n+': já se enfrentaram ('+k.map(x=>(x.ev||'evento')).join(', ')+')':focal+' x '+n+': o save não mostra confronto anterior'});
+    ctx.facts=lines.join('\n')+'\n'+h2h.join('\n');
+    return ctx;
+  }
+  function ctxReject(text,key){
+    if(!CTX) return false;
+    const names=rosterIn(text);
+    if(CTX.vet.size&&names.some(n=>CTX.vet.has(n))) return true;
+    if(!CTX.hairOk&&HAIR_RX.test(text)) return true;
+    if(!CTX.opp) return false;
+    if(names.some(n=>!CTX.allowed.has(n))) return true;
+    const mine=CTX.assign[key];
+    if(mine){
+      if(!names.includes(mine)) return true;
+      if(Object.entries(CTX.assign).some(([k,n])=>k!==key&&n&&names.includes(n))) return true;
+    }
+    return false;
+  }
+  function ctxBlock(key){
+    if(!CTX||!CTX.focal) return '';
+    const L=['','LUTADOR EM PAUTA: '+CTX.focal+(CTX.brandLbl?' ('+CTX.brandLbl+')':'')+'.'];
+    if(CTX.vet.size) L.push('VETADOS PELO HEAD BOOKER (proibido citar ou sugerir): '+[...CTX.vet].join(', ')+'.');
+    if(!CTX.opp) return L.join('\n');
+    L.push('Só cite lutadores da '+CTX.brandLbl+'. Nenhum nome fora da sua lista abaixo.');
+    const mine=CTX.assign[key];
+    if(key==='hal') L.push('FATOS DO SAVE (únicos permitidos; não invente luta nem resultado):\n'+CTX.facts+'\nVocê NÃO escolhe adversário: só resume o que esses fatos mostram.');
+    else if(mine) L.push('O adversário da SUA proposta é '+mine+' (cada voz tem um nome diferente; não cite o nome dos outros).'+(key==='jj'?' Formato: veredito + "'+CTX.brandLbl+' semana X — '+CTX.focal+' vs '+mine+'" + 1 frase de motivo.':key==='tony'?' Descreva UMA cena de '+CTX.focal+' e '+mine+' sem elementos que o chefe não citou.':' Aponte o custo ou furo de '+CTX.focal+' vs '+mine+' e termine com uma pergunta.'));
+    return L.join('\n');
+  }
+
+  function scrub(t, key, used){
+    let s=clean(t||'');
+    s=s.replace(/^(entendi(?:\s+o\s+plano)?[:\s,—.–-]*)+/i,'');
+    s=s.replace(/^(entendo(?:\s+o\s+plano)?[:\s,—.–-]*)+/i,'');
+    s=s.replace(/^(o risco [ée] que\s+)/i,'');
+    s=s.replace(/^(a c[aâ]mera pega\s+)/i,'');
+    s=s.replace(/^(no save,? ainda n[aã]o[^.]*\.\s*)/i,'');
+    s=s.replace(/^\s*(j\.?j\.?\s*purple|creative room|gendo ikari|analista)\s*:\s*/i,'');
+    s=s.trim();
+    if(!s || s.length<20 || FORBIDDEN_OPEN.test(s)) return pick(key, used);
+    s=clipS(s,key);
+    if(ctxReject(s,key)) return '';
+    for(const u of (used||[])) if(similar(s,u)) return '';
+    const mine=F(s);
+    for(const u of (used||[])){
+      const p=F(u);
+      if(p.length>40 && (mine.slice(0,60)===p.slice(0,60) || mine.includes(p.slice(0,50)) || p.includes(mine.slice(0,50))))
+        return pick(key, used);
+    }
+    /* frases-clichê repetidas na rodada */
+    const cliches=['nao foi so o cabelo','nao foi o cabelo que caiu','foi a confianca','voce vai lutar de novo'];
+    for(const c of cliches){
+      if(mine.includes(c) && (used||[]).some(u=>F(u).includes(c))) return pick(key, used);
+    }
+    return s;
+  }
+
+  function promptFor(key, latest, followUp, roundSoFar, dir, hist){
+    const SLICE={
+      jj:'Sua fatia: decidir o timing (qual brand, qual semana).',
+      tony:'Sua fatia: a cena concreta de TV.',
+      gendo:'Sua fatia: o furo ou custo que ninguém falou, e a pergunta dura.',
+      hal:'Sua fatia: fato do save ou lacuna.'
+    };
+    const roleTask=[
+      'O Head Booker JÁ DEFINIU o futuro (veja "Já decidido"). Trate como FECHADO: não reabra, não recomece, não resuma o que ele disse.',
+      SLICE[key],
+      'Cada voz cobre um pedaço DIFERENTE da linha do tempo. Não cite a mesma semana/show que outra voz já citou nesta rodada; avance para o passo seguinte.',
+      'Fale só do que está na mensagem dele e no que já foi decidido. PROIBIDO introduzir elementos que ele não citou (estipulações, corte de cabelo, vilões, lutadores, títulos). Se a mensagem dele é um tema novo, ignore o tema anterior.',
+      'Fale do SEU jeito (personalidade acima). Se sua fala puder ser trocada pela de outra voz, está errada.',
+      'Concordar é ok, mas some UMA ideia nova. Sem "entendi o plano".'
+    ].join(' ');
+
+    return [
+      SYS[key],
+      '',
+      'HEAD BOOKER:',
+      '"'+latest+'"',
+      dir?('\n'+dir):'',
+      roundSoFar?('\nJá na mesa nesta rodada:\n'+roundSoFar+'\nNão repita o que eles disseram. Concordar é ok; ecoar não.'):'\nVocê fala primeiro.',
+      hist?('\n'+hist.slice(0,2200)):'',
+      '',
+      'Agora fale como '+LBL[key]+':',
+      ctxBlock(key),
+      roleTask,
+      'Só o texto da fala. Sem nome na frente. Sem lista.'
+    ].join('\n');
+  }
+
+  function dirOf(m){
+    try{
+      const s=(typeof meetingStateEnsure==='function'?meetingStateEnsure(m):m.state)||{};
+      const list=s.userDirections||[];
+      if(!list.length) return '';
+      return 'Já decidido pelo chefe (não reabra):\n'+list.slice(-5).map(d=>'- '+d.text).join('\n');
+    }catch(e){return ''}
+  }
+
+  window.meetingRunPanel=async function(phase, userText){
+    const m=S.bookingMeeting;
+    if(!m) return;
+    if(window.busy||window.__mtgRunning){ try{toast&&toast('Espere as vozes terminarem.')}catch(e){} return; }
+
+    const latest=clean(userText||'');
+    if(!latest) return;
+
+    try{ if(typeof absorbDirection==='function') absorbDirection(m, latest); }catch(e){}
+
+    const turns=(m.messages||[]).filter(x=>x.role==='user'&&x.text).map(x=>clean(x.text));
+    const followUp=turns.length>=2 || /\b(mas a[ií]|depois|em seguida)\b/i.test(latest);
+
+    const token=m.runId=String(Date.now())+':v43';
+    window.busy=true; window.__mtgRunning=true;
+
+    const keys=['jj','tony','gendo','hal'];
+    let roundSoFar='';
+    const used=[];
+    let hist='';
+    try{ if(followUp && typeof memoryForModel==='function') hist='Contexto da reunião:\n'+memoryForModel(m).slice(-1200); }catch(e){}
+    const dir=dirOf(m);
+    try{ CTX=buildCtx(m,latest); }catch(e){ console.warn('[V46 ctx]',e); CTX=null; }
+
+    try{
+      for(const key of keys){
+        if(S.bookingMeeting!==m || m.runId!==token) break;
+        const msg={role:'persona',persona:key,text:'…',id:Date.now()+Math.random()};
+        m.messages.push(msg);
+        try{persist(); if(tab==='meeting') render()}catch(e){}
+
+        window.__mtgKey=key;
+        let answer='';
+        try{
+          await bookerSample(promptFor(key, latest, followUp, roundSoFar, dir, hist),{
+            engine:K.engine,
+            system:SYS[key],
+            maxTok:(MAXTOK[key]||300),
+            onText:c=>{
+              if(m.runId!==token) return;
+              answer=scrub(c.text, key, used);
+              msg.text=answer||'…';
+              try{if(tab==='meeting') render()}catch(e){}
+            }
+          });
+        }catch(e){ console.warn('[V43]', key, e); }
+
+        answer=scrub(answer||msg.text, key, used);
+        if(!answer||answer==='…'){
+          try{
+            let a2='';
+            await bookerSample(promptFor(key, latest, followUp, roundSoFar, dir, hist)+'\nSua resposta anterior ficou parecida com a de outra voz ou genérica. Refaça 100% no SEU estilo e com conteúdo diferente do que já foi dito.',{engine:K.engine,system:SYS[key],maxTok:(MAXTOK[key]||300),onText:c=>{if(m.runId!==token)return;a2=scrub(c.text,key,used);msg.text=a2||'…';try{if(tab==='meeting')render()}catch(e){}}});
+            answer=scrub(a2||msg.text,key,used);
+          }catch(e){}
+        }
+        if(!answer||answer==='…'){ const ix=m.messages.indexOf(msg); if(ix>=0) m.messages.splice(ix,1); try{persist(); if(tab==='meeting') render()}catch(e){} continue; }
+        msg.text=answer;
+        used.push(answer);
+
+        try{
+          if(typeof archiveVisiblePersona==='function') archiveVisiblePersona(m, msg);
+          if(typeof meetingTrackPersonaIdeas==='function') meetingTrackPersonaIdeas(m);
+        }catch(e){}
+
+        roundSoFar += (roundSoFar?'\n':'')+LBL[key]+': '+answer;
+        try{persist(); if(tab==='meeting') render()}catch(e){}
+      }
+    }finally{
+      window.busy=false; window.__mtgRunning=false;
+      try{persist(); if(tab==='meeting') render()}catch(e){}
+    }
+  };
+
+  console.log('[PLW] V43 — bookers espertos: concordam, dão ideia, sem fórmula de papagaio');
+})();
+</script>
+
+<!-- ===== PLW V44 — MUDANÇA DE ASSUNTO + RIVALIDADES ATIVAS + PRÓX. ASSUNTO NA UI =====
+     1) Quando o Head Booker muda de assunto (ex.: ladder Show Off), a mesa NÃO continua
+        falando de hair/Ospreay/MJF.
+     2) Abaixo do campo de envio: select só com rivalidades ATIVAS + caixa "próximo assunto".
+-->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V44__) return;
+  window.__PLW_MTG_V44__=true;
+
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const clean=x=>String(x||'').replace(/\s+/g,' ').trim();
+  const C=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+
+  function st(m){
+    try{return typeof meetingStateEnsure==='function'?meetingStateEnsure(m):(m.state||(m.state={}));}
+    catch(e){return m.state||(m.state={})}
+  }
+
+  /* ---- detecção de mudança de assunto ---- */
+  function topicSignature(text){
+    const t=F(text);
+    const sig={titles:[], names:[], stip:[], raw:t.slice(0,200)};
+    if(/show\s*off/.test(t)) sig.titles.push('show off');
+    if(/next\s*level|rising|motion/.test(t) && /champ|t[ií]tulo|cintur/.test(t)) sig.titles.push('motion');
+    if(/crown|ace|plwar/.test(t) && /champ|t[ií]tulo/.test(t)) sig.titles.push('plwar');
+    if(/world\s*(tag|championship|title)|mundial/.test(t)) sig.titles.push('world');
+    if(/ladder/.test(t)) sig.stip.push('ladder');
+    if(/hair|cabelo/.test(t)) sig.stip.push('hair');
+    if(/cage|jaula/.test(t)) sig.stip.push('cage');
+    try{
+      const names=(typeof resolveRosterMentions==='function'?resolveRosterMentions(text):[]).map(C);
+      sig.names=names.slice(0,6);
+    }catch(e){}
+    return sig;
+  }
+
+  function topicsDiverge(a, b){
+    if(!a||!b) return false;
+    /* stip diferente (ladder vs hair) = assunto novo */
+    if(a.stip.length && b.stip.length && !a.stip.some(s=>b.stip.includes(s))) return true;
+    /* título diferente */
+    if(a.titles.length && b.titles.length && !a.titles.some(t=>b.titles.includes(t))) return true;
+    /* nomes completamente diferentes e mensagem nova não cita os antigos */
+    if(a.names.length && b.names.length){
+      const overlap=a.names.filter(n=>b.names.some(x=>F(n)===F(x)));
+      if(!overlap.length && (a.titles.length||a.stip.length) && (b.titles.length||b.stip.length)) return true;
+    }
+    /* frases explícitas de mudança */
+    if(/\b(outra coisa|mudando de assunto|pr[oó]ximo assunto|agora (sobre|falando|quero)|estava pensando em|e se a gente (fizer|colocasse) (uma |um )?(ladder|cage|title))\b/.test(b.raw)) return true;
+    if(/\bladder\b/.test(b.raw) && /\b(show\s*off|championship|t[ií]tulo)\b/.test(b.raw) && !/\b(ospreay|mjf|friedman|hair|cabelo)\b/.test(b.raw)) return true;
+    return false;
+  }
+
+  function activeTopic(m){
+    const s=st(m);
+    s.currentTopic=normalizeTopic(s.currentTopic);
+    return s.currentTopic||null;
+  }
+
+  function normalizeTopic(x){
+    if(!x) return null;
+    if(typeof x==='string') return {text:clean(x).slice(0,400), sig:topicSignature(x), at:new Date().toISOString(), changed:false};
+    if(typeof x==='object' && x.text) return x;
+    return null;
+  }
+
+  function setTopic(m, text, forceNew){
+    const s=st(m);
+    const sig=topicSignature(text);
+    /* corrige estado legado em que currentTopic era string pura */
+    s.currentTopic=normalizeTopic(s.currentTopic);
+    const prev=s.currentTopic;
+    const changed=!!forceNew || (prev && topicsDiverge(prev.sig||topicSignature(prev.text||''), sig));
+    if(changed || !prev){
+      s.currentTopic={text:clean(text).slice(0,400), sig, at:new Date().toISOString(), changed:!!changed};
+      if(changed){
+        s.open=null;
+        if(s.debate){
+          s.debate.focal='';
+          s.debate.topic=clean(text).slice(0,120);
+          s.debate.mode='discuss';
+        }
+        s.meetingTopicCandidates=[];
+        s.lastShortlist=[];
+        console.log('[PLW V44] assunto mudou →', text.slice(0,80));
+      }
+      try{persist()}catch(e){}
+      return !!changed;
+    }
+    s.currentTopic={text:clean(text).slice(0,400), sig, at:prev.at||new Date().toISOString(), changed:false};
+    try{persist()}catch(e){}
+    return false;
+  }
+
+  /* ---- UI: rivalidades ativas + próximo assunto ---- */
+  function activeRivalries(){
+    try{
+      if(typeof meetingRivalryOptions==='function') return meetingRivalryOptions();
+      return Object.entries(groups('rivalry')).filter(([k,l])=>!(typeof isEnded==='function'&&isEnded('rivalry',k,l))).map(([k])=>k);
+    }catch(e){return[]}
+  }
+
+  window.meetingInsertRivalryV44=function(sel){
+    const v=sel&&sel.value; if(!v) return;
+    const t=document.getElementById('meeting-input');
+    if(t){
+      const ins=v.replace(/\s×\s/g,' x ');
+      t.value=(t.value?t.value.replace(/\s*$/,'')+' ':'')+ins+' ';
+      t.focus();
+    }
+    sel.selectedIndex=0;
+  };
+
+  window.meetingGoNextTopicV44=function(){
+    const m=S.bookingMeeting; if(!m) return;
+    const input=document.getElementById('meeting-next-topic-v44');
+    const t=clean(input&&input.value);
+    if(!t) return toast('Digite o próximo assunto.');
+    setTopic(m, t, true);
+    /* opcional: joga o texto no input principal e envia */
+    const main=document.getElementById('meeting-input');
+    if(main) main.value=t;
+    if(input) input.value='';
+    try{persist()}catch(e){}
+    if(typeof sendMeetingMessage==='function') sendMeetingMessage();
+    else if(typeof meetingRunPanel==='function'){
+      m.messages=m.messages||[];
+      m.messages.push({role:'user',text:t,id:Date.now()});
+      persist(); render();
+      meetingRunPanel('discuss', t);
+    }
+  };
+
+  function toolbarHtml(){
+    const rivs=activeRivalries();
+    const rivSel=rivs.length
+      ? `<select id="meeting-rivalry-pick-v44" onchange="meetingInsertRivalryV44(this)" style="flex:1;min-width:140px">
+          <option value="">⚔️ Rivalidade ativa…</option>
+          ${rivs.map(k=>`<option value="${esc(k)}">${esc(k.replace(/\s×\s/g,' x '))}</option>`).join('')}
+         </select>`
+      : `<select disabled style="flex:1"><option>Nenhuma rivalidade ativa</option></select>`;
+    return `<div id="meeting-toolbar-v44" class="card" style="margin-top:8px;border:1px dashed rgba(106,13,173,.35)">
+      <div class="mut" style="margin-bottom:6px">Atalhos da mesa — só rivalidades <b>ativas</b> • mudar de assunto sem misturar com o anterior</div>
+      <div class="row" style="gap:6px;align-items:stretch">
+        ${rivSel}
+      </div>
+      <div class="row" style="margin-top:8px;gap:6px">
+        <input id="meeting-next-topic-v44" placeholder="➡️ Próximo assunto (ex.: ladder Show Off)" style="flex:1">
+        <button class="btn o" style="flex:0 0 auto" onclick="meetingGoNextTopicV44()">Mudar assunto</button>
+      </div>
+    </div>`;
+  }
+
+  const prevV=window.vMeeting;
+  window.vMeeting=function(){
+    let h=typeof prevV==='function'?prevV():'';
+    if(!S.bookingMeeting) return h;
+    /* remove toolbars duplicadas de patches antigos de rivalry colados no botão */
+    h=h.replace(/<select id="meeting-rivalry-pick"[\s\S]*?<\/select>/g,'');
+    h=h.replace(/<div id="meeting-toolbar-v44"[\s\S]*?<\/div>/g,'');
+    const bar=toolbarHtml();
+    /* coloca logo após o botão enviar / send box */
+    if(/id="meeting-send-box"/.test(h)){
+      h=h.replace(/(id="meeting-send-box"[\s\S]*?<\/div>)/, function(m){ return m+bar; });
+    } else if(/onclick="sendMeetingMessage\(\)"/.test(h)){
+      h=h.replace(/(<button[^>]*onclick="sendMeetingMessage\(\)"[^>]*>[\s\S]*?<\/button>)/, function(m){ return m+bar; });
+    } else if(/id="meeting-input"/.test(h)){
+      h=h.replace(/(<textarea id="meeting-input"[\s\S]*?<\/textarea>)/, function(m){ return m+bar; });
+    } else {
+      h+=bar;
+    }
+    /* badge do assunto atual */
+    try{
+      const top=activeTopic(S.bookingMeeting);
+      if(top&&top.text){
+        const badge=`<div class="card" style="--c:#00A6FB;margin:8px 0"><b>📌 Assunto atual da mesa</b><div>${esc(top.text)}</div><div class="mut">As vozes devem falar só disso até você mudar de assunto.</div></div>`;
+        if(!h.includes('Assunto atual da mesa')){
+          const i=h.indexOf('🧠 REUNIÃO');
+          if(i>=0) h=h.slice(0,i)+badge+h.slice(i);
+          else h=badge+h;
+        }
+      }
+    }catch(e){}
+    return h;
+  };
+
+  /* ---- runner: injeta ASSUNTO ATUAL e proíbe misturar com o anterior ---- */
+  const prevRun=window.meetingRunPanel;
+  window.meetingRunPanel=async function(phase, userText){
+    const m=S.bookingMeeting;
+    if(!m) return prevRun&&prevRun.apply(this,arguments);
+
+    const latest=clean(userText||'');
+    if(latest){
+      const changed=setTopic(m, latest, false);
+      window.__mtgTopicChanged=!!changed;
+      window.__mtgTopicText=activeTopic(m)?.text||latest;
+    }
+
+    /* envolve bookerSample uma vez por rodada com regra de assunto */
+    const samplePrev=window.bookerSample;
+    if(typeof samplePrev==='function' && !window.__mtgTopicWrap){
+      window.__mtgTopicWrap=true;
+      window.bookerSample=async function(prompt, opts){
+        const topic=window.__mtgTopicText||'';
+        const changed=window.__mtgTopicChanged;
+        let p=String(prompt||'');
+        let sys=String((opts&&opts.system)||'');
+        if(topic && S.bookingMeeting){
+          const rule=[
+            '=== ASSUNTO ATUAL DA MESA (OBRIGATÓRIO) ===',
+            topic,
+            changed
+              ? 'O Head Booker ACABOU DE MUDAR DE ASSUNTO. Ignore o arco anterior a menos que ele cite de novo. Fale SOMENTE do assunto atual.'
+              : 'Fale sobre ESTE assunto. Não puxe outro card/rivalidade que não esteja nesta mensagem.',
+            'Não misture o assunto atual com outros arcos, rivalidades ou lutadores que o Head Booker não citou nesta mensagem. O que ele já decidiu está em "Já decidido" — siga isso, não invente resultado diferente.'
+          ].join('\n');
+          p=rule+'\n\n'+p;
+          sys+='\n'+rule;
+        }
+        try{
+          return await samplePrev.call(this, p, Object.assign({}, opts||{}, {system:sys}));
+        } finally {
+          /* keep wrap for the rest of the round */
+        }
+      };
+    }
+
+    try{
+      return await (prevRun ? prevRun.apply(this, arguments) : undefined);
+    } finally {
+      /* restaura sample após a rodada */
+      if(window.__mtgTopicWrap && samplePrev){
+        window.bookerSample=samplePrev;
+        window.__mtgTopicWrap=false;
+      }
+      window.__mtgTopicChanged=false;
+    }
+  };
+
+  /* sendMeetingMessage também marca mudança antes de rodar */
+  const prevSend=window.sendMeetingMessage;
+  if(typeof prevSend==='function'){
+    window.sendMeetingMessage=function(){
+      const m=S.bookingMeeting;
+      const input=document.getElementById('meeting-input');
+      const t=clean(input&&input.value);
+      if(m&&t) setTopic(m, t, false);
+      return prevSend.apply(this, arguments);
+    };
+  }
+
+  console.log('[PLW] V44 — mudança de assunto respeitada + rivalidades ativas + próximo assunto na UI');
+})();
+</script>
+
+<!-- ===== PLW V45 — BRANDS + CALENDÁRIO DE TV ATÉ O PPV =====
+     Regras que a mesa precisa internalizar:
+     - 3 brands: PLWAR, PLW MOTION, PLW SHOW OFF — cada uma com show semanal próprio
+     - Lutador só aparece no show da BRAND DELE (salvo crossover pedido pelo head booker)
+     - Cinturões de brand só são defendidos no show daquela brand; WORLD/TAG são GLOBAL
+     - Até o PPV (Final Battle / início de dezembro no calendário) há ~3 semanas de cada brand
+     - Build de rivalidade deve ser marcado no show certo (ex.: Ospreay/MJF = MOTION)
+-->
+<script>
+(function(){
+  'use strict';
+  if(window.__PLW_MTG_V45__) return;
+  window.__PLW_MTG_V45__=true;
+
+  const C=n=>typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim();
+  const F=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+
+  function brandOf(n){
+    try{
+      if(typeof bkBrandLbl==='function') return bkBrandLbl(n);
+      const b=String((S.roster[n]||{}).brand||'').toUpperCase();
+      if(b.includes('MOTION')) return 'PLW MOTION';
+      if(b.includes('SHOW')) return 'PLW SHOW OFF';
+      if(b.includes('WAR')) return 'PLWAR';
+      return b||'?';
+    }catch(e){return '?'}
+  }
+
+  function titleRules(){
+    try{
+      return (typeof TITLES!=='undefined'?TITLES:[]).map(t=>{
+        const br=typeof bkTitleBrand==='function'?bkTitleBrand(t):(t[1]==='GLOBAL'?'GLOBAL':t[1]);
+        const champ=((S.titles[t[0]]||{}).champ)||'vago';
+        const rule=t[1]==='GLOBAL'
+          ? 'GLOBAL — pode ser defendido em qualquer brand / PPV'
+          : ('só no show da brand '+br+' (ou no PPV)');
+        return t[0]+' | campeão: '+champ+' | '+rule;
+      }).join('\n');
+    }catch(e){return ''}
+  }
+
+  function rosterByBrand(){
+    const g={'PLWAR':[],'PLW MOTION':[],'PLW SHOW OFF':[],'?':[]};
+    Object.keys(S.roster||{}).forEach(n=>{
+      const b=brandOf(n);
+      (g[b]||g['?']).push(n);
+    });
+    return Object.keys(g).filter(k=>g[k].length).map(k=>k+': '+g[k].join(', ')).join('\n');
+  }
+
+  function recentWeeks(){
+    const weekly=(S.events||[]).filter(e=>e.type!=='ppv').slice(-9);
+    if(!weekly.length) return '(sem weeks registradas)';
+    return weekly.map(e=>{
+      const who=[...new Set((e.matches||[]).flatMap(m=>m.participants||[]))].slice(0,8).join(', ');
+      return (e.name||'?')+' | '+(e.date||'')+' | brand '+(e.brand||'?')+(who?' | lutadores: '+who:'');
+    }).join('\n');
+  }
+
+  function calendarBlock(){
+    let next='';
+    try{ next=typeof nextPPV==='function'?nextPPV(): (S.nextPPV||'Final Battle'); }catch(e){ next='Final Battle'; }
+    const month=S.month||'';
+    const cal=(S.cal||[]).map((n,i)=>(typeof MES!=='undefined'?MES[i]:String(i+1))+': '+(n||'—')).join(' | ');
+    return [
+      '=== ESTRUTURA DA PLW (OBRIGATÓRIO PARA BOOKING DE TV) ===',
+      'A PLW tem 3 brands com show SEMANAL próprio:',
+      '  • PLWAR — só lutadores da PLWAR',
+      '  • PLW MOTION — só lutadores da PLW MOTION',
+      '  • PLW SHOW OFF — só lutadores da PLW SHOW OFF',
+      'Um lutador NÃO aparece no show de outra brand, salvo crossover EXPLÍCITO do Head Booker.',
+      'Até o PPV costuma haver cerca de 3 weeks de CADA brand (3 PLWAR + 3 MOTION + 3 SHOW OFF).',
+      'Ao sugerir build/promo/luta de TV, diga EM QUAL SHOW (qual brand) isso acontece.',
+      'Não diga só "semana 3" sem brand. Diga "PLW MOTION semana X" ou "PLWAR semana Y".',
+      '',
+      'CINTURÕES E ONDE PODEM SER DEFENDIDOS:',
+      titleRules()||'(sem títulos no save)',
+      '',
+      'ROSTER POR BRAND (fonte do save):',
+      rosterByBrand()||'(roster vazio)',
+      '',
+      'CALENDÁRIO PPV: '+cal,
+      'Mês atual no jogo: '+(month||'não informado'),
+      'Próximo PPV no radar: '+next,
+      'Se o Head Booker marcou algo para o Final Battle, o build de TV é nas weeks das brands ANTES do PPV — no show certo de cada lutador.',
+      '',
+      'ÚLTIMAS WEEKS REGISTRADAS (para saber onde a história já está rodando):',
+      recentWeeks(),
+      '',
+      'Regra geral: o build de TV de uma rivalidade roda nas weeks da brand dos lutadores envolvidos; a luta decisiva fica no PPV. Só use isso para os nomes que o Head Booker citou agora.'
+    ].join('\n');
+  }
+
+  function namesInTopic(text){
+    try{ return (typeof resolveRosterMentions==='function'?resolveRosterMentions(text):[]).map(C); }
+    catch(e){ return []; }
+  }
+
+  function brandHintForMessage(text){
+    const names=namesInTopic(text);
+    if(!names.length) return '';
+    const lines=names.map(n=>n+' → '+brandOf(n)+((S.roster[n]||{}).inj?' (lesionado)':''));
+    const brands=[...new Set(names.map(brandOf))];
+    let tip='';
+    if(brands.length===1 && brands[0]!=='?')
+      tip='Build de TV desses nomes: show da '+brands[0]+' apenas.';
+    else if(brands.length>1)
+      tip='CUIDADO: nomes de brands diferentes. Crossover só se o Head Booker pedir; senão cada um no seu show.';
+    return 'LUTADORES CITADOS E SUAS BRANDS:\n'+lines.join('\n')+(tip?'\n'+tip:'');
+  }
+
+  /* injeta no bookerSample durante reunião */
+  const prevSample=window.bookerSample;
+  if(typeof prevSample==='function'){
+    window.bookerSample=async function(prompt, opts){
+      const inMtg=!!S.bookingMeeting && (window.__mtgRunning||window.busy||/ASSUNTO ATUAL|HEAD BOOKER|SUA TAREFA|SUA FALA/i.test(String(prompt||'')));
+      if(!inMtg) return prevSample.apply(this, arguments);
+
+      let p=String(prompt||'');
+      let sys=String((opts&&opts.system)||'');
+      const block=calendarBlock();
+      /* pega última fala do user no prompt se possível */
+      let userBit='';
+      const m=p.match(/HEAD BOOKER[^:]*:\s*\n?"?([\s\S]{0,500}?)(?:\n\n|\nJá |\n===|$)/);
+      if(m) userBit=brandHintForMessage(m[1]);
+      else {
+        try{
+          const last=(S.bookingMeeting.messages||[]).filter(x=>x.role==='user').slice(-1)[0];
+          if(last) userBit=brandHintForMessage(last.text);
+        }catch(e){}
+      }
+
+      const inject=block+(userBit?'\n\n'+userBit:'')+
+        '\n\nREGRA DE FALA: ao propor week de TV, nomeie a brand (PLWAR / PLW MOTION / PLW SHOW OFF). Não coloque lutador em show que não é da brand dele.';
+      p=inject+'\n\n'+p;
+      sys+='\n'+inject;
+
+      return prevSample.call(this, p, Object.assign({}, opts||{}, {system:sys}));
+    };
+  }
+
+  console.log('[PLW] V45 — brands + weeks até o PPV: lutador só no show da brand; títulos de brand no show certo');
+})();
+</script>
+
+<!-- ===== PLW V46 — REUNIÃO E COLETIVA "HUMANAS" (camada final) =====
+     Substitui o runner da reunião e a pergunta da coletiva por um fluxo limpo:
+     - sem "assunto travado" (V44) e sem obrigar "semana X" (V45)
+     - a ÚLTIMA fala do head booker manda; o que ele já fixou (ex.: luta no Final Battle) vale como decisão
+     - PPV = luta decisiva; shows semanais = só build de TV, sem numerar semana
+     - contexto curto e factual (campeões, brand, últimos resultados), em vez de pilhas de regras
+-->
+<script>
+(function(){
+'use strict';
+if(window.__PLW_V46__) return; window.__PLW_V46__=true;
+
+const fold=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+const C=n=>{try{return typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim()}catch(e){return String(n||'').trim()}};
+const cap=(t,n)=>{t=String(t||'').replace(/\s+/g,' ').trim();return t.length>n?t.slice(0,n-1)+'…':t};
+const brandLbl=n=>{try{return bkBrandLbl(n)}catch(e){return '?'}};
+const LABEL={jj:'J.J. Purple',hal:'Analista',tony:'Creative Room',dirk:'Dirk The Truth'};
+
+/* ---------- despacho cru: ignora todos os wrappers antigos de bookerSample ---------- */
+async function rawSample(p,o){
+  o=o||{};const e=o.engine||K.engine;
+  if(e==='ollama'){const t=await callBookerAI(p,o.system,o.maxTok,o.onText,o.onStatus);if(o.onText)o.onText({text:t});return{text:t}}
+  if(e==='groq'){const t=await callGroqBooker(p,o.system,o.maxTok);if(o.onText)o.onText({text:t});return{text:t}}
+  return sample(p,o);
+}
+
+/* ---------- fatos compactos vindos do save ---------- */
+function brandKey(text){const f=fold(text);if(/\bmotion\b/.test(f))return'MOTION';if(/show off|showoff/.test(f))return'SHOW OFF';if(/plwar|\bwar\b/.test(f))return'PLWAR';return''}
+function matchLine(m){
+  const draw=/empate|draw/i.test(m.winner||'');
+  const lo=m.loser||(m.participants||[]).filter(p=>p!==m.winner).join(', ');
+  let s=draw?((m.participants||[]).join(' x ')+' (empate)'):(m.winner+' venceu '+lo);
+  if(m.championship)s+=' ['+m.championship+(m.title_change?' — TÍTULO MUDOU':'')+']';
+  if(m.stipulation)s+=' ('+cap(m.stipulation,40)+')';
+  return s;
+}
+function eventBlock(e,max){
+  const ms=(e.matches||[]).slice(0,max).map(matchLine);
+  return (e.name||'?')+(e.date?' ('+e.date+')':'')+(ms.length?'\n   '+ms.join('\n   '):' — sem lutas registradas');
+}
+function isHeld(champ,n){try{if(typeof hasC==='function')return hasC(champ,n)}catch(e){}return String(champ||'').split(' & ').map(C).includes(n)}
+function mentionedNames(texts,extra){
+  let out=[];
+  (texts||[]).forEach(t=>{try{out=out.concat(namesIn(t))}catch(e){}});
+  return [...new Set(out.concat((extra||[]).map(C)))].filter(n=>S.roster&&S.roster[n]).slice(0,6);
+}
+function wrestlerInfo(n){
+  const w=S.roster[n]||{};
+  let s='- '+n+': '+brandLbl(n)+', '+(w.alignment||'alinhamento ?')+(w.inj?', LESIONADO ('+w.inj+')':'')+', '+(w.w||0)+'V-'+(w.l||0)+'D';
+  const held=(typeof TITLES!=='undefined'?TITLES:[]).filter(t=>isHeld((S.titles[t[0]]||{}).champ,n)).map(t=>t[0]);
+  if(held.length)s+=', campeão: '+held.join(' / ');
+  try{
+    const mm=ML().filter(m=>sd(m,n)).slice(-3).reverse().map(m=>{const r=sd(m,n);return (r==='w'?'V':r==='l'?'D':'E')+' vs '+opp(m,n).join(' & ')});
+    if(mm.length)s+=', últimas lutas: '+mm.join('; ');
+  }catch(e){}
+  return s;
+}
+function activeRivalries(names,max){
+  try{
+    const g=Object.entries(groups('rivalry')).filter(([k,l])=>{try{return !isEnded('rivalry',k,l)}catch(e){return true}});
+    const rel=g.filter(([k,l])=>(l[0].names||[]).some(n=>names.includes(n)));
+    const rest=g.filter(x=>!rel.includes(x));
+    return rel.concat(rest).slice(0,max).map(([k,l])=>'- '+k+': '+cap((l[l.length-1]||{}).text||'',110));
+  }catch(e){return[]}
+}
+function facts(text,opts){
+  opts=opts||{};
+  const bkey=opts.brand||brandKey(text),L=[];
+  let nx='';try{nx=nextPPV()}catch(e){}
+  const ppvEv=(S.events||[]).filter(e=>e.type==='ppv').slice(-1)[0];
+  L.push('=== FATOS DO SAVE (únicos fatos válidos) ===');
+  L.push('Mês no jogo: '+(S.month||'?')+'. Último PPV realizado: '+(ppvEv?ppvEv.name:'nenhum registrado')+'. Próximo PPV: '+nx+'.');
+  L.push('CAMPEÕES:');
+  (typeof TITLES!=='undefined'?TITLES:[]).forEach(t=>{
+    let br='';try{br=bkTitleBrand(t)}catch(e){br=t[1]}
+    L.push('- '+t[0]+': '+((S.titles[t[0]]||{}).champ||'vago')+(t[1]==='GLOBAL'?' (global)':' (só '+br+')'));
+  });
+  /* últimos shows */
+  const wk=(S.events||[]).filter(e=>e.type!=='ppv');
+  const brands=bkey?[bkey]:['PLWAR','MOTION','SHOW OFF'];
+  L.push('RESULTADOS RECENTES:');
+  brands.forEach(b=>{
+    const list=wk.filter(e=>bk(e.brand)===b).slice(bkey?-2:-1).reverse();
+    if(!list.length)L.push('Último show '+b+': nada registrado.');
+    list.forEach((e,i)=>L.push((i?'Show anterior ':'ÚLTIMO SHOW ')+b+': '+eventBlock(e,bkey?9:5)));
+  });
+  if(ppvEv)L.push('ÚLTIMO PPV: '+eventBlock(ppvEv,6));
+  /* citados */
+  const names=mentionedNames(opts.texts||[text],opts.extraNames);
+  if(names.length){L.push('LUTADORES CITADOS:');names.forEach(n=>L.push(wrestlerInfo(n)))}
+  const rv=activeRivalries(names,names.length?5:6);
+  if(rv.length){L.push('RIVALIDADES ATIVAS:');rv.forEach(x=>L.push(x))}
+  /* destaques do roster da brand */
+  const by={};
+  Object.entries(S.roster||{}).forEach(([n,w])=>{const b=bk(w.brand);if(!b)return;if(bkey&&b!==bkey)return;(by[b]=by[b]||[]).push([n,w])});
+  Object.keys(by).forEach(b=>{
+    const top=by[b].sort((a,c)=>(c[1].w||0)-(a[1].w||0)).slice(0,12).map(([n,w])=>n+(w.inj?' (lesionado)':''));
+    L.push('ROSTER '+b+' (mais vitórias): '+top.join(', '));
+  });
+  return L.join('\n');
+}
+
+
+/* ---------- pedidos especiais: o CÓDIGO entende o pedido e escolhe os fatos; a IA só dá a voz ---------- */
+const BR_ALL=['PLWAR','MOTION','SHOW OFF'];
+const BR_NAME={'PLWAR':'PLWAR','MOTION':'PLW MOTION','SHOW OFF':'PLW SHOW OFF'};
+const NUMW={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5};
+function aliasHits(t){
+  const tk=fold(t).split(' ').filter(Boolean),g=new Set(tk);for(let i=0;i<tk.length-1;i++)g.add(tk[i]+tk[i+1]);
+  const hits=[];
+  Object.keys(S.roster||{}).forEach(n=>{const parts=fold(n).split(' ').filter(Boolean);if(parts.length<2)return;
+    const c1=parts.slice(0,2).join(''),c0=parts.join('');
+    if((c1.length>=5&&g.has(c1))||(c0.length>=5&&g.has(c0)))hits.push(n)});
+  return hits;
+}
+function namesIn(t){
+  let a=[];try{a=typeof resolveRosterMentions==='function'?resolveRosterMentions(t).map(C):[]}catch(e){}
+  try{aliasHits(t).forEach(n=>{n=C(n);if(!a.includes(n))a.push(n)})}catch(e){}
+  return a;
+}
+function tagFacMap(){
+  const out={tag:[],faction:[]};
+  ['tag','faction'].forEach(ty=>{try{Object.entries(groups(ty)).forEach(([k,l])=>{out[ty].push({k,names:[...new Set(l.flatMap(x=>x.names||[]).map(C))]})})}catch(e){}});
+  return out;
+}
+function takenNames(){const m=tagFacMap();return new Set(m.tag.concat(m.faction).flatMap(x=>x.names))}
+function userExclusions(texts){
+  const ex=new Set();
+  (texts||[]).forEach(t=>{if(/j[aá]\s+(tem|est[aá]|[eé]|faz)|n[aã]o\s+(quero|use|cite)/i.test(String(t||'')))namesIn(t).forEach(n=>ex.add(n))});
+  return ex;
+}
+function brandOfName(n){return bk((S.roster[n]||{}).brand)}
+function formOf(n){try{return ML().filter(m=>sd(m,n)).slice(-3).map(m=>{const r=sd(m,n);return r==='w'?'V':r==='l'?'D':'E'}).join(' ')}catch(e){return''}}
+function heldTitles(n){return (typeof TITLES!=='undefined'?TITLES:[]).filter(t=>isHeld((S.titles[t[0]]||{}).champ,n)).map(t=>t[0])}
+function out_(n){return typeof bkOut==='function'?bkOut(n):!!(S.roster[n]||{}).inj}
+/* brand em que a conversa está: pela brand dos lutadores citados nas últimas falas */
+function workBrand(texts,pauta){
+  for(const t of (texts||[]).slice().reverse().slice(0,4)){
+    const c={};namesIn(t).forEach(n=>{const b=brandOfName(n);if(b)c[b]=(c[b]||0)+1});
+    const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];if(top)return top[0];
+    const k=brandKey(t);if(k)return k;
+  }
+  const k=brandKey(pauta);if(k)return k;
+  const last=(S.events||[]).filter(e=>e.type!=='ppv').slice(-1)[0];
+  return last?bk(last.brand):'';
+}
+function candidates(brand,excl,max){
+  return Object.entries(S.roster||{}).filter(([n,w])=>bk(w.brand)===brand&&!excl.has(C(n))&&!out_(n))
+    .map(([n,w])=>{const fm=formOf(n);const sc=(w.w||0)-0.5*(w.l||0)+fm.split(' ').reduce((a,x)=>a+(x==='V'?1:x==='D'?-0.5:0),0);return{n,w,fm,sc}})
+    .sort((a,b)=>b.sc-a.sc).slice(0,max);
+}
+function candLine(c){const h=heldTitles(c.n);return '- '+c.n+' ('+(c.w.alignment||'alinhamento ?')+', '+(c.w.w||0)+'V-'+(c.w.l||0)+'D'+(c.fm?', últimas lutas '+c.fm:'')+(h.length?', campeão '+h[0]:'')+')'}
+
+function detectIntent(texts,pauta){
+  const last=String((texts||[]).slice(-1)[0]||''),f=fold(last);
+  const gen=/\b(novo|novos|nova|novas|sugir\w*|sugest\w*|suger\w*|ideia|ideias|cite|crie|criar|forme|formar|formasse|montar|monte|formacao)\b/.test(f);
+  const tag=/\b(tags?|duplas?|tag team|tag teams)\b/.test(f),fac=/\b(factions?|stables?|faccao|faccoes)\b/.test(f);
+  const road=/como (vamos|vou|a gente) levar|levar .{0,25}ate|caminho .{0,20}(ppv|final battle)|rumo ao|ate o (ppv|final battle)/.test(f);
+  const namesReq=/(preciso|precisa|quero|me de|me da|sugira|sugiram|cite|faltam|falta).{0,30}\b(nomes?|lutadores?)\b|quem (tu|voce|vc|voces|cs) (iria|colocaria|poria|botaria|chamaria|escolheria)|quem (entra|entraria|colocar|poderia|pode entrar)|novos nomes/.test(f)||/\bx\s*\?/i.test(last);
+  const nextShow=/(o que|oque|que).{0,25}(bookar|bookear|colocar|fazer|montar).{0,30}(proximo|prox|esse|nesse) show|card d[oe] (proximo|prox) show|proximo show/.test(f);
+  const corrective=/\b(ja tem|ja esta|ja e|outra|outro|outros|outras|troque|troca|nao gostei|nao quero)\b/.test(f)&&f.split(' ').length<=14&&!tag;
+  const prevIt=corrective?detectIntent((texts||[]).slice(0,-1),pauta):null;
+  let kind=(corrective&&prevIt&&prevIt.kind)?prevIt.kind:(tag&&gen?'tag':fac&&gen?'faction':namesReq?'names':nextShow?'nextshow':road?'road':'');
+  if(!kind)return null;
+  const all=/(cada|todas|todos).{0,14}(divisao|divisoes|brand|brands|show|shows)|(uma?|1).{0,8}para cada|por (divisao|brand)/.test(f);
+  let brands=all?BR_ALL:(brandKey(last)?[brandKey(last)]:BR_ALL);
+  const it={kind,brands,all};
+  if(kind==='names'||kind==='nextshow'||kind==='road'){
+    const b=workBrand(texts,pauta);it.brand=b;if(b)it.brands=[b];
+  }
+  if(kind==='names'){
+    let n=3;const mm=f.match(/\b(\d+|um|uma|dois|duas|tres|quatro|cinco)\s+(novos?\s+|outros?\s+|diferentes\s+)?(nomes?|lutadores?)\b/);
+    if(mm)n=+mm[1]||NUMW[mm[1]]||3;else{const ph=(last.match(/\bx\s*\?/gi)||[]).length;if(ph)n=ph}
+    const excl=new Set();(texts||[]).slice(-4).forEach(t=>namesIn(t).forEach(x=>excl.add(x)));
+    userExclusions(texts).forEach(x=>excl.add(x));
+    it.n=n;it.exclude=excl;it.cands=candidates(it.brand,excl,Math.max(8,n*3));
+  }
+  return it;
+}
+function freeByBrand(brands,excl){
+  const taken=takenNames(),out={};
+  brands.forEach(b=>{
+    out[b]=Object.entries(S.roster||{}).filter(([n,w])=>bk(w.brand)===b&&!taken.has(C(n))&&!excl.has(C(n))&&!out_(n))
+      .sort((a,c)=>(c[1].w||0)-(a[1].w||0)).slice(0,14).map(([n,w])=>{
+        const held=heldTitles(n).filter(t=>!/tag/i.test(t));
+        return n+' ('+(w.alignment||'?')+', '+(w.w||0)+'V-'+(w.l||0)+'D'+(held.length?', campeão '+held[0]:'')+')';
+      });
+  });
+  return out;
+}
+function intentBlock(it,texts){
+  if(!it)return '';
+  const L=[],excl=userExclusions(texts),m=tagFacMap();
+  if(it.kind==='tag'||it.kind==='faction'){
+    const what=it.kind==='tag'?'NOVAS DUPLAS (TAG TEAMS)':'NOVAS FACTIONS';
+    L.push('=== PEDIDO DELE: '+what+' ===');
+    L.push('"Novos" = criar o que AINDA NÃO EXISTE. Isso é um pedido de ideias, não uma recusa.');
+    L.push('TAG TEAMS QUE JÁ EXISTEM (não repita): '+(m.tag.map(x=>x.k+' ['+x.names.join(' + ')+']').join('; ')||'nenhum'));
+    L.push('FACTIONS QUE JÁ EXISTEM (quem está nelas não entra em time novo): '+(m.faction.map(x=>x.k+' ['+x.names.join(', ')+']').join('; ')||'nenhuma'));
+    if(excl.size)L.push('ELE DISSE QUE JÁ TÊM TAG/FACTION (não use): '+[...excl].join(', '));
+    const fr=freeByBrand(it.brands,excl);
+    L.push('CANDIDATOS LIVRES (sem tag, sem faction, sem lesão) — USE SÓ ESTES:');
+    it.brands.forEach(b=>L.push(BR_NAME[b]+': '+(fr[b].join('; ')||'ninguém livre')));
+    L.push('TAREFA: '+(it.kind==='tag'?'proponha UMA dupla nova para cada brand pedida ('+it.brands.map(b=>BR_NAME[b]).join(', ')+'), dois lutadores da MESMA brand, preferindo o mesmo alinhamento ou um contraste que renda história.':'proponha UMA faction nova (3 ou 4 lutadores) para cada brand pedida ('+it.brands.map(b=>BR_NAME[b]).join(', ')+'), todos da mesma brand.')+' Cada proposta: nomes e UMA frase de motivo baseada nos dados. Não invente luta passada.');
+  }else if(it.kind==='names'){
+    L.push('=== PEDIDO DELE: '+it.n+' NOME(S) PARA A LUTA ('+(BR_NAME[it.brand]||'brand ?')+') ===');
+    L.push('Já estão na conversa (NÃO repita, ele quer nomes NOVOS): '+([...it.exclude].join(', ')||'—'));
+    L.push('CANDIDATOS (da brand, saudáveis, do melhor para o pior momento) — USE SÓ ESTES:');
+    it.cands.forEach(c=>L.push(candLine(c)));
+    L.push('TAREFA: diga exatamente '+it.n+' nome(s) desta lista e, por nome, UMA frase de motivo (campanha, últimas lutas, alinhamento, título). Dê os nomes já; não responda só com pergunta nem repita a ideia dele.');
+  }else if(it.kind==='nextshow'){
+    const b=it.brand;
+    L.push('=== PEDIDO DELE: CARD DO PRÓXIMO SHOW DA '+(BR_NAME[b]||'BRAND')+' ===');
+    const titles=(typeof TITLES!=='undefined'?TITLES:[]).filter(t=>t[1]===b).map(t=>t[0]+': '+((S.titles[t[0]]||{}).champ||'vago'));
+    L.push('Títulos da brand: '+(titles.join('; ')||'—'));
+    const names=Object.keys(S.roster||{}).filter(n=>brandOfName(n)===b).map(C);
+    try{const rv=Object.entries(groups('rivalry')).filter(([k,l])=>!isEnded('rivalry',k,l)&&(l[0].names||[]).some(n=>names.includes(C(n)))).slice(0,5).map(([k,l])=>k+': '+cap((l[l.length-1]||{}).text||'',100));L.push('Rivalidades ativas da brand: '+(rv.join('; ')||'nenhuma registrada'))}catch(e){}
+    const av=candidates(b,new Set(),12);
+    L.push('DISPONÍVEIS (saudáveis):');av.forEach(c=>L.push(candLine(c)));
+    const off=names.filter(out_);if(off.length)L.push('FORA (lesão/suspensão): '+off.join(', '));
+    L.push('TAREFA: proponha 3 lutas para este show (uma delas o main event) só com DISPONÍVEIS, com UMA frase de motivo cada (campanha, forma, rivalidade, título). Em show semanal só se constrói; a luta decisiva fica pro PPV.');
+  }else if(it.kind==='road'){
+    const b=it.brand;let nx='';try{nx=nextPPV()}catch(e){}
+    L.push('=== PEDIDO DELE: CAMINHO ATÉ O PPV ('+nx+') ===');
+    if(b){
+      const names=Object.keys(S.roster||{}).filter(n=>brandOfName(n)===b).map(C);
+      const titles=(typeof TITLES!=='undefined'?TITLES:[]).filter(t=>t[1]===b||t[1]==='GLOBAL').map(t=>t[0]+': '+((S.titles[t[0]]||{}).champ||'vago'));
+      L.push('Campeões que valem para '+BR_NAME[b]+': '+titles.join('; '));
+      try{const rv=Object.entries(groups('rivalry')).filter(([k,l])=>!isEnded('rivalry',k,l)&&(l[0].names||[]).some(n=>names.includes(C(n)))).slice(0,6).map(([k,l])=>k+': '+cap((l[l.length-1]||{}).text||'',100));L.push('Rivalidades ativas da brand: '+(rv.join('; ')||'nenhuma registrada'))}catch(e){}
+    }
+    L.push('TAREFA: proponha 2 ou 3 linhas de build para os shows semanais da brand até o PPV, usando só campeões, resultados e rivalidades acima. A luta decisiva fica para o PPV; nos shows só se constrói. Sem inventar o que aconteceu antes.');
+  }
+  return L.join('\n');
+}
+function roleFor(key,it){
+  const k=it&&it.kind;
+  if(k==='tag'||k==='faction'){const w=k==='tag'?'duplas':'factions';return {
+    jj:'Dê AGORA as '+w+' pedidas (uma por brand), só com candidatos livres. Formato: "PLWAR: A + B — motivo".',
+    hal:'Escolha UMA das '+w+' já citadas e justifique com um número real (campanha V-D ou últimas lutas), ou troque uma por outro candidato livre.',
+    tony:'Escolha uma ou duas das '+w+' da sala e dê o ângulo de história (por que funcionam juntos). Uma ideia curta.',
+    dirk:'Dê as '+w+' pedidas com uma crítica curta a cada uma. Só candidatos livres.'}[key]}
+  if(k==='names')return {
+    jj:'Dê os '+it.n+' nome(s) agora, da lista de CANDIDATOS, cada um com o motivo em uma frase.',
+    hal:'Dos nomes já citados na sala, mantenha os que têm melhor campanha/forma e troque o mais fraco por outro CANDIDATO, com o número que justifica.',
+    tony:'Escolha 1 ou 2 dos candidatos e diga que história cada um traz para essa luta (tensão com os outros nomes). Sem roteiro.',
+    dirk:'Dê os '+it.n+' nome(s) da lista de CANDIDATOS e critique o mais arriscado em uma frase.'}[key];
+  if(k==='nextshow')return {
+    jj:'Monte as 3 lutas do card, com o main event primeiro.',
+    hal:'Escolha a luta do card que mais se sustenta pelos números (campanha/forma) e a que menos, e diga por quê. Não recapitule o último show.',
+    tony:'Escolha uma das lutas do card e dê o ângulo de história (promo, tensão, o que abre até o PPV). Sem decidir resultado.',
+    dirk:'Diga qual luta do card é a mais fraca e por quê, com um fato do save, e proponha a troca.'}[key];
+  if(k==='road')return {
+    jj:'Proponha 2 ou 3 linhas de build pros shows semanais até o PPV.',
+    hal:'Aponte UM número ou resultado real que ajude ou atrapalhe uma das linhas, e diga qual você manteria.',
+    tony:'Dê UM ângulo de build para os shows semanais (quem aparece, que tensão), sem decidir resultado.',
+    dirk:'Diga qual parte do caminho é fraca e por quê, com um fato do save.'}[key];
+  return {
+    jj:'Ajude a executar o que ele acabou de dizer: diga o que falta para fechar (quem, como chega lá, onde cai entre os shows e o PPV). Se ele perguntou sua opinião, dê.',
+    hal:'Compare a ideia dele com UMA alternativa, usando um número dos FATOS. Não recapitule o último show.',
+    tony:'Dê UM ângulo de história que a ideia dele abre (tensão, motivo, o que vem depois). Sem decidir resultado.',
+    dirk:'Questione a ideia com UM fato real do save; se ele pediu ideias, dê as ideias e critique em uma frase.'}[key];
+}
+function validate(out,userAll,peers,it,texts,ctxText,key){
+  const p=problems(out,userAll,peers);
+  if(/n[ãa]o vou (criar|sugerir|fazer)|n[ãa]o irei (criar|sugerir)/i.test(out))p.push('Ele PEDIU ideias. Dê as ideias agora, não recuse.');
+  if(it&&(it.kind==='tag'||it.kind==='faction')){
+    const taken=takenNames(),ex=userExclusions(texts),used=namesIn(out);
+    const bad=used.filter(n=>taken.has(n)||ex.has(n));
+    if(bad.length)p.push(bad.join(', ')+' já está em tag/faction (ou ele disse que já tem). Use só CANDIDATOS LIVRES.');
+  }
+  if(it&&it.kind==='names'){
+    const ok=new Set(it.cands.map(c=>c.n).concat([...it.exclude])),bad=namesIn(out).filter(n=>!ok.has(n));
+    if(bad.length)p.push(bad.join(', ')+' não está na lista de CANDIDATOS. Use só os candidatos.');
+    if((key==='jj'||key==='dirk')&&!namesIn(out).some(n=>it.cands.some(c=>c.n===n)))p.push('Você não deu nenhum nome da lista de CANDIDATOS. Dê os nomes pedidos.');
+  }
+  if(ctxText){
+    const allow=new Set(ctxText.match(/\d+(?:[.,]\d+)?/g)||[]);
+    const inv=[...new Set(out.match(/\d+(?:[.,]\d+)?/g)||[])].filter(x=>!allow.has(x));
+    if(inv.length)p.push('Você citou número que não está nos FATOS ('+inv.join(', ')+'). Use só números dos FATOS ou não cite número.');
+  }
+  return p;
+}
+
+/* ---------- o que o head booker já disse/fixou ---------- */
+function ppvNames(){return [...new Set((S.cal||[]).filter(Boolean).concat(['Final Battle']))]}
+function userLines(m){return (m.messages||[]).filter(x=>x.role==='user'&&x.text).map(x=>x.text)}
+function commitments(m){
+  const pn=ppvNames();
+  return userLines(m).map(t=>{
+    const hit=pn.find(p=>fold(t).includes(fold(p)));
+    return hit?'- [FIXADO NO PPV '+hit.toUpperCase()+'] '+cap(t,260):'';
+  }).filter(Boolean).slice(-6).join('\n');
+}
+
+/* ---------- regras (curtas) e personas (sem frases de exemplo para o modelo copiar) ---------- */
+const RULES=[
+'=== COMO FUNCIONA A PLW ===',
+'- Cada brand tem um show SEMANAL, só para CONSTRUIR história (promo, ataque, luta menor). A luta importante é no PPV.',
+'- Se ele fixou uma luta num PPV (ex.: Final Battle), ela FICA lá. Não mova para TV e não proponha de novo.',
+'- Nunca numere semana ("semana 8") e nunca invente data. Fale "no próximo show" ou "nos shows até o PPV".',
+'- Lutador só aparece no show da brand dele, salvo crossover pedido por ele.',
+'- Ele é o booker final. Se ele apresentou um plano (ex.: "ladder com A, B e C, A vence"), o plano VALE: ajude a montar o que falta. Não diga que está "forçado" nem reabra o plano. Só avise se um FATO contradiz (lesão, brand errada, título vago), citando o fato.',
+'- Se ele te corrigiu, aceite em meia frase e refaça certo, sem pedir desculpa.',
+'- Números e resultados: só os que estão nos FATOS. Nunca invente vitórias, hype, notas, rivalidades ou cenas. Sem o dado, diga "isso eu não tenho aqui".',
+'- Responda à ÚLTIMA fala dele. Se ele pediu nomes ou ideias, dê agora.',
+'- 1 a 4 frases, direto com "você", sem "E se...", sem roteiro de cena, sem resumir o que ele acabou de dizer.'
+].join('\n');
+
+const SYS={
+ jj:'Você é J.J. Purple, booker parceiro do head booker da PLW, uma liga fictícia de um save de Journey of Wrestling. Seu trabalho é ajudar a EXECUTAR o que ele decide: quem entra, como chega lá e o que isso abre. O plano dele é o plano.',
+ hal:'Você é o Analista da PLW. Compara opções pelos números reais do save (campanha V-D, últimas lutas, brand, lesão, títulos). Não recapitula o último show: escolhe uma opção e justifica com um número.',
+ tony:'Você é a Creative Room da PLW. Dá ideias de história: motivo, tensão, o que a luta abre. Não decide resultado e não inventa passado.',
+ dirk:'Você é Dirk The Truth, crítico honesto e severo da PLW. Questiona com UM fato real do save. Se ele pediu ideias, dá as ideias e critica em uma frase.'
+};
+const SYS_COMMON=' Fale em português do Brasil, como gente numa sala de booking: sem lista, sem título, sem aspas de roteiro. Nunca mostre raciocínio, nunca escreva em inglês, nunca use etiquetas como FATO ou SUGESTÃO. Nomes de lutadores: só os que aparecem nos FATOS.';
+function sysFor(k){return (SYS[k]||SYS.jj)+SYS_COMMON}
+
+
+function transcript(m,skip){
+  return (m.messages||[]).filter(x=>x!==skip&&x.text&&x.text!=='…'&&(x.role==='user'||x.role==='persona')).slice(-8)
+    .map(x=>(x.role==='user'?'HEAD BOOKER (você fala com ele)':(LABEL[x.persona]||'equipe'))+': '+cap(x.text,420)).join('\n');
+}
+
+function problems(out,userAll,peers){
+  const p=[];
+  if(/\bsemanas?\s*\d+/i.test(out)&&!/semanas?\s*\d+/i.test(userAll))p.push('Você numerou uma semana. Não existe "semana N" aqui: fale "nos shows até o PPV".');
+  if(/(^|[.!?]\s+)e se\b/i.test(out))p.push('Não use hipótese cinematográfica ("E se..."). Fale como booker: opinião direta.');
+  if(/head booker/i.test(out))p.push('Não diga "Head Booker" na 3ª pessoa. Fale direto com ele.');
+  if(typeof plwSimilarity==='function'){const c=peers.find(x=>plwSimilarity(out,x)>=0.42);if(c)p.push('Ficou parecido com uma fala já dita ("'+cap(c,120)+'"). Traga outro ângulo.')}
+  return p;
+}
+function tidy7(t){let o=t;try{o=removeRepeatedResponseText(o)}catch(e){}try{o=plwTrimSentences(o,8)||o}catch(e){}return String(o||'').trim()}
+function tidy(t){
+  let o=t;try{o=removeRepeatedResponseText(o)}catch(e){}
+  try{o=plwTrimSentences(o,4)||o}catch(e){}
+  return String(o||'').trim();
+}
+
+/* ---------- REUNIÃO ---------- */
+window.meetingRunPanel=async function(phase,userText){
+  const meeting=S.bookingMeeting;if(!meeting||busy)return;
+  try{meetingStateEnsure(meeting)}catch(e){}
+  const token=String(Date.now())+':'+Math.random().toString(36).slice(2);
+  meeting.runId=token;busy=true;window.__mtgRunning=true;
+  const users=userLines(meeting);
+  const last=String(userText||users[users.length-1]||'').trim();
+  const pauta=[meeting.modeLabel,meeting.target].filter(Boolean).join(' • ')||'reunião livre';
+  try{
+    const voices=['jj','hal','tony'];
+    for(let i=0;i<voices.length;i++){
+      if(S.bookingMeeting!==meeting||meeting.runId!==token)break;
+      const key=voices[i];
+      const message={role:'persona',persona:key,text:'…',id:Date.now()+meeting.messages.length};
+      meeting.messages.push(message);persist();if(tab==='meeting')render();
+      const round=meeting.messages.slice(meeting.messages.map(x=>x.role).lastIndexOf('user')+1).filter(x=>x!==message&&x.role==='persona'&&x.text&&x.text!=='…');
+      const older=meeting.messages.filter(x=>x!==message&&x.role==='persona'&&x.persona===key&&x.text&&x.text!=='…').slice(-1);
+      const peers=round.concat(older).map(x=>x.text);
+      const it=detectIntent(users,pauta);
+      const br=it&&it.brand?it.brand:(it&&it.brands&&it.brands.length===1?it.brands[0]:workBrand(users,pauta));
+      const fx=facts(users.slice(-3).join(' \n ')||pauta,{texts:users.slice(-3).concat([pauta]),extraNames:meeting.wrestlers||[],brand:br});
+      const ib=intentBlock(it,users);
+      const base=[
+        RULES,'',fx,'',ib,ib?'':undefined,
+        'PAUTA DA REUNIÃO: '+pauta,
+        commitments(meeting)?'O QUE ELE JÁ FIXOU EM PPV (decisão final, não reabra):\n'+commitments(meeting):'',
+        '','ÚLTIMAS FALAS DELE (mais recente por último; tudo que ele decidiu vale):\n'+users.slice(-4).map(t=>'- '+cap(t,260)).join('\n'),
+        '','CONVERSA ATÉ AGORA:\n'+(transcript(meeting,message)||'(a reunião está começando)'),'',
+        last?'ÚLTIMA FALA DELE — responda a isto: "'+last+'"':'Ele ainda não falou: abra a conversa sobre a pauta com uma posição ou uma pergunta curta.',
+        round.length?'Já falaram nesta rodada (não repita; acrescente algo novo ou escolha entre o que já foi dito): '+round.map(x=>(LABEL[x.persona]||'')+': '+cap(x.text,220)).join(' | '):'',
+        roleFor(key,it),'Responda só como '+LABEL[key]+'.'
+      ].filter(x=>x!==undefined).join('\n');
+      const run=async extra=>{
+        let out='';
+        await rawSample(base+(extra?'\n\nATENÇÃO: '+extra:''),{engine:K.engine,system:sysFor(key),maxTok:(it?520:380),onText:c=>{try{out=removeRepeatedResponseText(c.text)}catch(e){out=c.text}}});
+        return out;
+      };
+      /* 1ª tentativa é silenciosa: o que aparece na tela já passou na conferência (nada de digitar e apagar) */
+      let out=await run('');
+      const bad=validate(out,users.join(' '),peers,it,users,base,key);
+      if(bad.length&&meeting.runId===token)out=await run('sua resposta anterior quebrou regras: '+bad.join(' '));
+      if(meeting.runId!==token)break;
+      message.text=(it?tidy7(out):tidy(out))||'Sem resposta.';
+      try{meetingTrackPersonaIdeas(meeting)}catch(e){}
+      persist();if(tab==='meeting')render();
+    }
+  }catch(error){
+    meeting.messages=(meeting.messages||[]).filter(x=>!(x.role==='persona'&&x.text==='…'));
+    meeting.messages.push({role:'system',text:'Erro na reunião: '+(error.message||error.code||error)});
+  }finally{busy=false;window.__mtgRunning=false;persist();if(tab==='meeting')render()}
+};
+
+
+const prevV=window.vMeeting;
+if(typeof prevV==='function'){
+  window.vMeeting=function(){
+    let h=prevV.apply(this,arguments);
+    try{h=String(h).replace(/<div class="card"[^>]*><b>📌 Assunto atual da mesa<\/b>[\s\S]*?até você mudar de assunto\.<\/div><\/div>/,'')}catch(e){}
+    return h;
+  };
+}
+
+/* ---------- COLETIVA ---------- */
+window.pressAskNext=async function(){
+  const p=S.press;if(!p||!p.active||busy)return;
+  if((p.asked||0)>=p.count){p.active=false;persist();render();return}
+  const pool=['mara','vera','dirk','hal'];
+  const prevKey=(p.messages||[]).filter(m=>m.r==='a'&&m.key).slice(-1)[0];
+  const choices=pool.filter(k=>!prevKey||k!==prevKey.key);
+  const key=choices[Math.floor(Math.random()*choices.length)];
+  const topic=(p.topics&&p.topics.length)?p.topics[Math.floor(Math.random()*p.topics.length)]:'booking';
+  const mem=(S.pressMemories||[]).filter(m=>m.reporter===key).slice(-3);
+  const msgs=(p.messages||[]).filter(m=>m.t&&m.r&&!/^Preparando/.test(m.t));
+  const booker=msgs.filter(m=>m.r==='u').map(m=>m.t);
+  const lastAns=booker[booker.length-1]||'';
+  const asked=msgs.filter(m=>m.r==='a').map(m=>m.t);
+  const out={r:'a',key,t:'Preparando a pergunta...'};
+  p.currentReporter=key;p.messages.push(out);busy=true;persist();render();
+  let ctx='';try{ctx=cap(pressInterviewContext(),1800)}catch(e){}
+  const prompt=[
+    'Coletiva de imprensa da PLW, pergunta '+((p.asked||0)+1)+' de '+p.count+'. Você é '+pressReporterLabel(key)+', repórter. Você entrevista o booker, não é booker.',
+    (p.kind==='post'?'É uma coletiva DEPOIS do show: os resultados nos FATOS são reais.':'É uma coletiva ANTES do evento: o card citado é só proposta.')+(p.targetName?' Evento/alvo: '+p.targetName+'.':'')+(p.brand?' Brand: '+p.brand+'.':''),
+    'Tema desta pergunta: '+topic+'.','',
+    facts(lastAns||p.targetName||'',{brand:p.brand?bk(p.brand):'',texts:booker.slice(-3).concat([p.targetName||''])}),
+    ctx?'\nCONTEXTO DO EVENTO:\n'+ctx:'',
+    mem.length?'\nO QUE VOCÊ JÁ PERGUNTOU ANTES A ESTE BOOKER:\n'+mem.map(m=>'- P: '+cap(m.question,140)+' | R: '+cap(m.answer,140)).join('\n'):'',
+    booker.length?'\nO QUE O BOOKER JÁ RESPONDEU NESTA COLETIVA (é decisão dele; não pergunte de novo):\n'+booker.slice(-6).map(t=>'- '+cap(t,240)).join('\n'):'',
+    asked.length?'\nPERGUNTAS JÁ FEITAS NESTA COLETIVA (não repita assunto nem lutador):\n'+asked.slice(-5).map(t=>'- '+cap(t,160)).join('\n'):'',
+    lastAns?'\nÚLTIMA RESPOSTA DELE: "'+lastAns+'"':'\nEsta é a primeira pergunta.',
+    '\nREGRAS: faça UMA pergunta só, de no máximo 2 frases curtas (até 35 palavras), falando direto com ele ("você"). Se houver resposta anterior, reaja em poucas palavras e vá para um ponto NOVO. Se ele disse que uma luta está num PPV, isso é decisão: não pergunte se vai ser em outro lugar. Nunca use "E se...", nunca invente fato (resultado, derrota, rivalidade) que não esteja nos FATOS, nunca numere semanas e nunca chame ele de "Head Booker" na 3ª pessoa.'
+  ].filter(Boolean).join('\n');
+  try{
+    let raw='';
+    await rawSample(prompt,{engine:K.engine,system:pressReporterSystem(key),maxTok:200,onText:x=>{raw=x.text;out.t=x.text;persist();if(tab==='press')render()}});
+    let q=String(raw||'').trim();
+    if(/(^|[.!?]\s+)e se\b/i.test(q)||/\bsemanas?\s*\d+/i.test(q)||/head booker/i.test(q)){
+      await rawSample(prompt+'\n\nATENÇÃO: sua versão anterior usou "E se", número de semana ou "Head Booker". Refaça com uma pergunta direta e curta.',{engine:K.engine,system:pressReporterSystem(key),maxTok:200,onText:x=>{q=x.text;out.t=x.text;persist();if(tab==='press')render()}});
+    }
+    try{q=plwTrimSentences(q,2)||q}catch(e){}
+    out.t=String(q||'').trim()||'A jornalista não retornou uma pergunta.';
+    p.asked=(p.asked||0)+1;
+  }catch(e){out.t='Erro: '+(e.message||e.code);p.messages.pop();p.active=false}
+  busy=false;persist();render();
+};
+
+
+/* ---------- CHATS INDIVIDUAIS (J.J., Analista, Creative Room, Dirk) ---------- */
+const PLABEL={jj:'J.J. Purple',hal:'Analista PLW',tony:'Creative Room',dirk:'Dirk The Truth'};
+window.ask=async function(key,text,box){
+  const clean=String(text||'').trim();if(!clean)return;
+  if(typeof sample==='undefined'&&K.engine!=='ollama'&&K.engine!=='groq'){toast('IA indisponível nesta visualização.');return}
+  if(privateTurnLocks[key]||busy)return;
+  if(chatLast[key]&&Date.now()-chatLast[key]>=300000)endChat(key,false);
+  const h=chats[key]||(chats[key]=[]);
+  const req=String(key)+':'+Date.now()+':'+Math.random().toString(36).slice(2);
+  const user={r:'u',t:clean},answer={r:'a',t:'',requestId:req};
+  h.push(user,answer);privateTurnLocks[key]=req;touchChat(key);busy=true;render();
+  try{
+    const users=h.filter(x=>x!==answer&&x.r==='u').map(x=>x.t);
+    const it=detectIntent(users,'');
+    const br=it&&it.brand?it.brand:(it&&it.brands&&it.brands.length===1?it.brands[0]:workBrand(users,''));
+    const fx=facts(clean,{texts:users.slice(-3),brand:br});
+    const ib=intentBlock(it,users);
+    const hist=h.filter(x=>x!==answer&&x!==user&&x.t).slice(-6).map(x=>(x.r==='u'?'HEAD BOOKER':PLABEL[key]+' (você)')+': '+cap(x.t,500)).join('\n');
+    const prompt=[
+      'Você é '+(PLABEL[key]||'uma persona PLW')+' num chat PRIVADO com o head booker. Só vocês dois. Fale só como você.',
+      RULES,'',fx,'',ib,ib?'':undefined,
+      'ÚLTIMAS FALAS DELE (tudo que ele decidiu vale):\n'+users.slice(-4).map(t=>'- '+cap(t,260)).join('\n'),'',
+      hist?'CONVERSA ATÉ AGORA:\n'+hist:'(início da conversa)','',
+      'MENSAGEM ATUAL DELE — responda a isto: "'+clean+'"',
+      'Se ele te corrigiu ou reclamou, aceite em meia frase e refaça certo. Se ele pediu ideias, nomes ou sugestões, DÊ agora; só pergunte se faltar uma informação sem a qual seria chute.',
+      roleFor(key,it)||'',
+      'Responda uma única vez.'
+    ].filter(x=>x!==undefined).join('\n');
+    const run=async extra=>{
+      let out='';
+      await rawSample(prompt+(extra?'\n\nATENÇÃO: '+extra:''),{engine:K.engine,system:sysFor(key),maxTok:it?560:400,
+        onText:x=>{try{out=removeRepeatedResponseText(x.text)}catch(e){out=x.text}},
+        onStatus:x=>{if(privateTurnLocks[key]===req){answer.s=x;upd(key)}}});
+      return out;
+    };
+    window.__olCut=false;
+    let out=await run('');
+    const bad=validate(out,users.join(' '),[],it,users,prompt,key);
+    if(bad.length&&privateTurnLocks[key]===req)out=await run('sua resposta anterior quebrou regras: '+bad.join(' '));
+    answer.t=(it?tidy7(out):tidy(out))||'Sem resposta.';
+    answer.cut=!!window.__olCut;
+  }catch(e){answer.t=answer.t||('Erro: '+(e.message||e.code||e))}
+  finally{if(privateTurnLocks[key]===req){delete privateTurnLocks[key];busy=false;touchChat(key);render()}}
+};
+
+
+window.__plwV46={facts,rules:RULES};
+console.log('[PLW] V46 — reunião/coletiva: última fala manda, PPV = luta decisiva, sem "semana N", contexto curto');
 })();
 </script>
