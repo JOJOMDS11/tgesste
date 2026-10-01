@@ -35,7 +35,7 @@ textarea{min-height:64px}
 .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
 .fabs{position:fixed;right:12px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;gap:8px;align-items:center}
 .fab,.fabn{padding:15px 17px;border-radius:99px;font:800 15px Inter,sans-serif;box-shadow:0 0 26px #b4128fcc,0 6px 20px #0008}
-.fabn{background:linear-gradient(90deg,#d4a017,#FF6B00);color:#1a1030}
+.fabn{background:linear-gradient(90deg,#d4a017,#FF6B00);color:#1a1030}.fabu{background:linear-gradient(90deg,#FF6B00,#b4128f);color:#fff;padding:15px 14px}
 .pad{min-height:46vh;padding:8px 12px;border:1px solid #d9c98a;border-radius:10px;background-color:#fffbe6;color:#2a2312;background-image:repeating-linear-gradient(transparent,transparent 27px,#e6d9a0 27px,#e6d9a0 28px);background-attachment:local;font:16px/28px 'Courier New',monospace}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pad{background-color:#1d1730;color:var(--tx);border-color:var(--ln);background-image:repeating-linear-gradient(transparent,transparent 27px,#2f2450 27px,#2f2450 28px)}}
 :root[data-theme="dark"] .pad{background-color:#1d1730;color:var(--tx);border-color:var(--ln);background-image:repeating-linear-gradient(transparent,transparent 27px,#2f2450 27px,#2f2450 28px)}
@@ -59,9 +59,9 @@ textarea{min-height:64px}
 </style>
 </head>
 <body>
-<header><button class="btn s" id="pdb" title="Planos (bloco de notas)" style="position:absolute;right:62px;top:10px;padding:8px 12px" onclick="openPlans()">📝</button><button class="btn s" id="qsb" title="Buscar lutador" style="position:absolute;right:10px;top:10px;padding:8px 12px" onclick="openQS()">🔎</button><div class="logo"><h1 style="font-size:34px">PLW BOOKER</h1></div><nav id="nav"></nav></header>
+<header><button class="btn s" id="pdb" title="Planos (bloco de notas) • Ctrl+P" style="position:absolute;right:62px;top:10px;padding:8px 12px" onclick="openPlans()">📝</button><button class="btn s" id="qsb" title="Buscar lutador" style="position:absolute;right:10px;top:10px;padding:8px 12px" onclick="openQS()">🔎</button><div class="logo"><h1 style="font-size:34px">PLW BOOKER</h1></div><nav id="nav"></nav></header>
 <main id="v"></main>
-<div class="fabs"><button class="btn fabn" id="fabn" onclick="openPlans()">📝 PLANOS</button><button class="btn fab" id="fab">📸 ENVIAR PRINT</button></div>
+<div class="fabs"><button class="btn fabn" id="fabn" title="Ctrl+P" onclick="openPlans()">📝 PLANOS</button><button class="btn fabn fabu" id="fabu" title="Atualizar save da pasta" onclick="quickUpdateSave()">🔄 ATUALIZAR</button><button class="btn fab" id="fab">📸 ENVIAR PRINT</button></div>
 <div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" hidden></div>
 <script>
@@ -1098,14 +1098,46 @@ async function bkAll(){const d=await idb();return new Promise((ok,no)=>{const r=
 async function bkPut(rec){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('s','readwrite');t.objectStore('s').put(rec);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
 async function bkDel(id){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('s','readwrite');t.objectStore('s').delete(id);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
 let _bt;function bkSoon(){clearTimeout(_bt);_bt=setTimeout(autoBk,2000)}
-async function autoBk(){try{if(!hasData(S))return;const ts=Date.now(),rec={ts,ev:S.events.length,ro:Object.keys(S.roster).length,json:JSON.stringify(S)};await bkPut({id:'latest',...rec});const all=(await bkAll()).filter(x=>String(x.id).startsWith('snap-')).sort((a,b)=>a.ts-b.ts);if(!all.length||ts-all[all.length-1].ts>30*60000){await bkPut({id:'snap-'+ts,...rec});all.push({id:'snap-'+ts});}while(all.length>8){await bkDel(all.shift().id)}}catch(e){}}
+async function autoBk(){try{if(!hasData(S))return;const ts=Date.now(),rec={ts,ev:S.events.length,ro:Object.keys(S.roster).length,json:JSON.stringify(S)};const _old=(await bkAll()).find(x=>x.id==='latest');await bkPut({id:'latest',...rec,note:(_old&&_old.note)||''});const all=(await bkAll()).filter(x=>String(x.id).startsWith('snap-')).sort((a,b)=>a.ts-b.ts);if(!all.length||ts-all[all.length-1].ts>30*60000){await bkPut({id:'snap-'+ts,...rec,note:''});all.push({id:'snap-'+ts});}while(all.length>2){await bkDel(all.shift().id)}}catch(e){}}
 const _ps=persist;persist=function(){_ps();bkSoon()};
 async function bkBoot(){try{if(hasData(S))return;const all=(await bkAll()).sort((a,b)=>b.ts-a.ts);if(!all.length)return;if(confirm('Não achei seus dados neste navegador, mas existe um backup automático de '+dt(all[0].ts)+' ('+all[0].ev+' eventos). Restaurar agora?')){S=norm(JSON.parse(all[0].json));persist();render();toast('✅ Backup automático restaurado')}}catch(e){}}
 async function bkRestore(id){try{const r=(await bkAll()).find(x=>x.id===id);if(!r)return;if(!confirm('Restaurar o backup de '+dt(r.ts)+'? Isso substitui os dados atuais.'))return;S=norm(JSON.parse(r.json));persist();render();toast('✅ Backup restaurado')}catch(e){toast('Não consegui restaurar')}}
-async function bkList(){const e=$('#bkl');if(!e)return;try{const all=(await bkAll()).sort((a,b)=>b.ts-a.ts);e.innerHTML=all.map(x=>`<div class="row" style="align-items:center;margin:4px 0"><div class="mut" style="flex:1">${x.id==='latest'?'⭐ Último':'📌 Ponto'} • ${esc(dt(x.ts))} • ${x.ev} eventos • ${x.ro} lutadores</div><button class="btn s" style="flex:0 0 auto;padding:6px 10px" onclick="bkRestore('${x.id}')">Restaurar</button></div>`).join('')||'<div class="mut">Ainda não há backup automático (ele grava 2s depois de cada alteração).</div>'}catch(er){e.innerHTML='<div class="mut">Backup automático indisponível neste navegador.</div>'}}
+async function bkList(){try{const all=(await bkAll()).sort((a,b)=>b.ts-a.ts).slice(0,3);const h=all.map(x=>`<div class="card" style="margin:6px 0"><div class="row" style="align-items:center"><div class="mut" style="flex:1">${x.id==='latest'?'⭐ Último':'📌 Ponto'} • ${esc(dt(x.ts))} • ${x.ev} eventos • ${x.ro} lutadores</div><button class="btn s" style="flex:0 0 auto;padding:6px 10px" onclick="bkRestore('${x.id}')">Restaurar</button></div><input placeholder="📝 Anotação (ex.: antes do Final Battle)" value="${esc(x.note||'')}" onchange="bkNote('${x.id}',this.value)" style="margin-top:6px"></div>`).join('')||'<div class="mut">Ainda não há backup automático (ele grava 2s depois de cada alteração).</div>';['bkl','bkl2'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=h})}catch(er){['bkl','bkl2'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='<div class="mut">Backup automático indisponível neste navegador.</div>'})}}
+async function bkNote(id,v){try{const r=(await bkAll()).find(x=>x.id===id);if(!r)return;r.note=v.slice(0,120);await bkPut(r);toast('📝 Anotação salva')}catch(e){}}
+async function bkSnapNow(note){try{if(!hasData(S))return;const ts=Date.now();await bkPut({id:'snap-'+ts,ts,ev:S.events.length,ro:Object.keys(S.roster).length,json:JSON.stringify(S),note:note||''});const all=(await bkAll()).filter(x=>String(x.id).startsWith('snap-')).sort((a,b)=>a.ts-b.ts);while(all.length>2){await bkDel(all.shift().id)}}catch(e){}}
+async function quickUpdateSave(){if(!confirm('Atualizar o save agora?\n\nLê o arquivo mais recente da pasta vinculada. Antes, guardo uma cópia do que você tem agora.'))return;await bkSnapNow('Antes de atualizar o save');saveDirRefresh();setTimeout(bkList,4000)}
+/* Planos: botão Atualizar + lista suspensa de backups */
+const _ph=plansHtml;plansHtml=function(){let h=_ph();h=h.replace('</h2>','</h2><div class="row" style="margin:0 0 4px"><button class="btn o" style="padding:7px 14px" onclick="quickUpdateSave()">🔄 Atualizar save</button><button class="btn" style="padding:7px 14px" onclick="planGoPpv()">🏟️ Ir pro PPV</button></div>');h=h.replace('</nav>','</nav><details class="bkd" style="margin:6px 0"><summary class="mut" style="cursor:pointer">🛟 Backups (máx. 3) • anotações</summary><div id="bkl2" class="mut">carregando...</div></details>');h=h.replace('<textarea id="pb"',(PT==='ppv'?'<button class="btn g" style="width:100%;margin:4px 0 8px" onclick="planToPpv()">➡️ Enviar pro card do PPV</button>':'')+'<div id="pbchips" style="margin:4px 0 8px"></div><textarea id="pb"');return h};
+const _dpl=drawPlans;drawPlans=function(){_dpl();bkList();planChips()};
+/* Atalho: Ctrl+P abre/fecha o bloco de Planos (troque a letra em PLANOS_KEY) */
+const PLANOS_KEY='p';
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey||String(e.key).toLowerCase()!==PLANOS_KEY)return;e.preventDefault();if(!$('#sheet').hidden&&isPlans())closeSheet();else openPlans()},true);
+/* Stats do lutador: abre a ficha e o "Voltar" volta pra tela atual já atualizada */
+function statsOpen(n){n=String(n||'').trim();if(!n)return toast('Vaga em branco.');if(!qsKind(n))return toast('Não achei "'+n+'" no roster.');
+if(SH.length===1){if(isPlans())SH=[plansHtml()];else if(String(SH[0]).indexOf('data-ppv')>=0&&CURP)SH=[ppvHtml(CURP)]}qsOpen(n)}
+function planNames(txt){const T=nz(txt),out=[],esc2=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');acNames().forEach(n=>{if(!qsKind(n))return;const m=new RegExp('(^|[^a-z0-9])'+esc2(nz(n))+'($|[^a-z0-9])').exec(T);if(m)out.push([n,m.index])});
+String(txt).split(/\n/).forEach(l=>{const p=l.split(/\s+(?:x|vs\.?|versus)\s+/i);if(p.length<2)return;p.forEach(n=>{n=n.trim();if(!n||/^\?+$/.test(n))return;const c=acFind(n);if(c.length===1&&qsKind(c[0])&&!out.some(o=>o[0]===c[0]))out.push([c[0],T.indexOf(nz(n))])})});
+return out.sort((a,b)=>a[1]-b[1]).map(o=>o[0])}
+function planChips(){const e=document.getElementById('pbchips');if(!e)return;const L=planNames(pbd()[PT]||'');e.innerHTML=L.length?'<div class="mut">👤 Toque no nome para ver os stats:</div>'+L.map(n=>`<span class="tag lk" style="--c:#6A0DAD" data-n="${esc(n)}" onclick="statsOpen(this.dataset.n)">👤 ${esc(n)}</span>`).join(' '):''}
+let _pcT;document.addEventListener('input',e=>{if(e.target&&e.target.id==='pb'){clearTimeout(_pcT);_pcT=setTimeout(planChips,300)}});
+function planGoPpv(){const r=planParse(pbd().ppv),name=r.ppv||String(nextPPV()).split(' • ')[0];if(!name||name==='—')return toast('Não sei qual é o PPV. Coloque o nome dele na 1ª linha das notas.');CURP=name;PPT='card';SH=[];pv(ppvHtml(name))}
+/* Planos → card do PPV: lê as notas (título na linha de cima, "A x B" na de baixo) e cria as lutas no card */
+function planParse(txt){const L=String(txt||'').split(/\n/).map(l=>l.trim()).filter(Boolean),names=acNames(),SEP=/\s+(?:x|vs\.?|versus)\s+/i;
+const rs=n=>{n=String(n).trim();if(!n||/^\?+$/.test(n))return'';const ex=names.find(x=>nz(x)===nz(n));if(ex)return ex;const c=acFind(n);return c.length===1?c[0]:n};
+const tt=l=>{const q=nz(l);if(q.length<4)return'';const e=TITLES.find(t=>nz(t[0])===q);if(e)return e[0];const c=TITLES.filter(t=>nz(t[0]).includes(q));return c.length===1?c[0][0]:''};
+let ppv='',k=0;if(L.length&&!SEP.test(L[0])){const c=(S.cal||[]).find(n=>n&&nz(n)===nz(L[0]));if(c){ppv=c;k=1}}
+const items=[],ign=[];let pend='';const flush=()=>{if(pend){items.push({a:[(S.titles[pend]||{}).champ||'',''],st:'',t:pend,w:'',n:''});pend=''}};
+for(;k<L.length;k++){const l=L[k],p=l.split(SEP);if(p.length>=2){const a=p.map(rs).slice(0,6);while(a.length<2)a.push('');items.push({a,st:a.length===3?'Triple Threat':a.length===4?'Fatal 4-Way':'',t:pend,w:'',n:''});pend=''}else{const t=tt(l);if(t){flush();pend=t}else ign.push(l)}}
+flush();return{ppv,items,ign}}
+function planToPpv(){const r=planParse(pbd().ppv);if(!r.items.length)return toast('Não achei lutas nas notas. Escreva "A x B" numa linha e o título na linha de cima.');
+const name=r.ppv||String(nextPPV()).split(' • ')[0];if(!name||name==='—')return toast('Não sei qual é o PPV. Coloque o nome dele na 1ª linha das notas.');
+const P=ppvPlan(name),ky=m=>m.a.filter(Boolean).map(nz).sort().join('|')+'#'+(m.t||''),have=new Set(P.card.map(ky)),novos=r.items.filter(m=>!have.has(ky(m))),pul=r.items.length-novos.length;
+if(!novos.length)return toast('Essas lutas já estão no card de '+name+'.');
+if(!confirm('Enviar '+novos.length+' luta'+(novos.length>1?'s':'')+' para o card de '+name+'?'+(pul?'\n('+pul+' já estava no card e será pulada)':'')))return;
+novos.forEach(m=>P.card.push(m));persist();CURP=name;PPT='card';SH=[];pv(ppvHtml(name));toast('➡️ '+novos.length+' luta'+(novos.length>1?'s':'')+' no card de '+name+(r.ign.length?' • ignorei '+r.ign.length+' linha(s) que não entendi':''))}
 const _eb=exportBk;exportBk=function(){_eb();try{localStorage.setItem('plw-lastexp',String(Date.now()))}catch(e){}};
 function bkBanner(){if(!hasData(S))return'';let t=0;try{t=+localStorage.getItem('plw-lastexp')||0}catch(e){}const d=t?Math.floor((Date.now()-t)/864e5):-1;if(d>=0&&d<7)return'';return`<div class="card" style="--c:#b3261e"><b>🛟 ${d<0?'Você ainda não exportou nenhum backup.':'Faz '+d+' dias sem exportar backup.'}</b><div class="mut">O navegador pode apagar o LocalStorage. O arquivo exportado é o backup de verdade.</div><button class="btn s" style="margin-top:6px" onclick="exportBk();render()">⬇️ Exportar agora</button></div>`}
-const _vs=vSys;vSys=function(){return _vs()+`<div class="card"><h3>🛟 Backup automático</h3><div class="mut">Uma cópia é gravada a cada alteração (mais pontos de restauração a cada 30 min) em outro armazenamento do navegador. Se limparem o LocalStorage, ele te oferece restaurar sozinho. Se limpar TODOS os dados do site, isso some também, então exporte o arquivo de vez em quando.</div><div id="bkl" class="mut">carregando...</div></div>`};
+const _vs=vSys;vSys=function(){return _vs()+`<div class="card"><h3>🛟 Backup automático</h3><div class="mut">Uma cópia é gravada a cada alteração (guarda só os 3 mais recentes: o último + 2 pontos a cada 30 min) em outro armazenamento do navegador. Se limparem o LocalStorage, ele te oferece restaurar sozinho. Se limpar TODOS os dados do site, isso some também, então exporte o arquivo de vez em quando.</div><details><summary class="mut" style="cursor:pointer">Ver backups (máx. 3)</summary><div id="bkl" class="mut">carregando...</div></details></div>`};
 async function testOl(){const o=$('#olr');const base=String(K.ollama||'http://127.0.0.1:11434').replace(/\/$/,'');const L=[];const show=()=>{o.innerHTML=L.join('<br>')};o.textContent='testando...';
  delete _olKind[base];
  const get=async(x,ms)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(base+x,{signal:c.signal})}finally{clearTimeout(t)}};
@@ -1342,7 +1374,7 @@ function pcQuick(i){const m=pcard()[i],e=document.getElementById('pcq-'+i);if(!m
  persist();pcSave();toast(msg)}
 function pcMatch(m,i,tot){const w0=S.roster[pcExp(m.a[0]||'')[0]]||{};const on=PC_BR.includes(m.bf),lst=on?'pcl-'+i:'pcl',pl=pcPool(m,false);
 const dl=on?`<datalist id="pcl-${i}">${[...pl.ws,...pl.tg].sort().map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`:'';
-const sl=m.a.map((v,k)=>`<div class="pcs"><input list="${lst}" value="${esc(v)}" placeholder="Lutador ${k+1}" onchange="pcSet(${i},'a',this.value,${k})">${m.a.length>2?`<button class="pcx" title="Remover" onclick="pcSlotDel(${i},${k})">✕</button>`:''}</div>`).join('<div class="pcvs">VS</div>');
+const sl=m.a.map((v,k)=>`<div class="pcs"><input list="${lst}" value="${esc(v)}" placeholder="Lutador ${k+1}" onchange="pcSet(${i},'a',this.value,${k})"><button class="pcx" title="Ver stats" onclick="statsOpen(pcard()[${i}].a[${k}])">👤</button>${m.a.length>2?`<button class="pcx" title="Remover" onclick="pcSlotDel(${i},${k})">✕</button>`:''}</div>`).join('<div class="pcvs">VS</div>');
 const bo=[['','🔎 Auto (pela luta)'],['PLWAR','PLWAR • Tier S'],['MOTION','PLW MOTION'],['SHOW OFF','PLW SHOW OFF'],['ALL','Todas as brands']].map(x=>`<option value="${x[0]}" ${(m.bf||'')===x[0]?'selected':''}>${x[1]}</option>`).join('');
 return`${dl}<div class="card pcm" id="pcm-${i}" style="--c:${bc(w0.brand)}"><div class="row" style="align-items:center;margin-bottom:6px"><b class="pcn">LUTA ${i+1}${i===tot-1&&tot>1?' ⭐ MAIN EVENT':''}</b><span style="flex:0 0 auto;display:flex;gap:4px"><button class="btn s pcb" onclick="pcMove(${i},-1)">↑</button><button class="btn s pcb" onclick="pcMove(${i},1)">↓</button><button class="btn r pcb" onclick="pcDel(${i})">🗑</button></span></div>${sl}<div class="mut" style="margin-top:8px">⚡ Adicionar rápido • escolha a brand e o lutador</div><select id="pcb-${i}" onchange="pcBf(${i},this.value)">${bo}</select><div class="row" style="align-items:center;margin-top:4px"><select id="pcq-${i}" style="flex:1">${pcQuickOpts(m)}</select><button class="btn g pcb" style="flex:0 0 auto" onclick="pcQuick(${i})">➕ Adicionar</button></div><button class="btn s" style="width:100%;margin:6px 0" ${m.a.length>=6?'disabled':''} onclick="pcSlotAdd(${i})">➕ Adicionar espaço vazio (${m.a.length}/6)</button><label class="mut">Estipulação</label><input list="pcsl" value="${esc(m.st)}" placeholder="Luta normal" onchange="pcSet(${i},'st',this.value)"><label class="mut" id="pch-${i}">${esc(pcTitleHint(m))}</label><select id="pct-${i}" onchange="pcSet(${i},'t',this.value)">${pcTitleOpts(m)}</select><label class="mut">Resultado (sua escolha de booking)</label><select id="pcw-${i}" onchange="pcSet(${i},'w',this.value)">${pcWin(m)}</select><input value="${esc(m.n)}" placeholder="Nota: finalização, o que isso cria..." onchange="pcSet(${i},'n',this.value)"><div id="pcn-${i}">${pcWarn(m)}</div></div>`}
 function sugHtml(P){const s=P.sug||[];if(!s.length&&!P.aiS)return'';return`<div class="sec" style="font-size:18px">🤖 SUGESTÕES DA IA (BOOKING)</div>${P.aiS?`<div class="bub a">${esc(P.aiS)}</div>`:''}${s.map((x,i)=>`<div class="card" style="--c:#FF6B00"><b>${x.a.map(esc).join(' x ')}</b>${x.st?' • '+esc(x.st):''}${x.t?'<br>🏆 '+esc(x.t):''}${x.w?'<br>Vence: '+esc(x.w):''}${x.why?'<div class="mut">'+esc(x.why)+'</div>':''}<div class="row" style="margin-top:6px"><button class="btn g" onclick="sugAdd(${i})">➕ Colocar no card</button><button class="btn s" style="flex:0 0 auto" onclick="sugDel(${i})">✕</button></div></div>`).join('')}`}
@@ -6035,7 +6067,7 @@ Regras:
 </script>
 
 
-<!-- ===== PLW V36 — MEMÓRIA REAL DA REUNIÃO / TRANSCRIPT NO LOCALSTORAGE =====
+<!-- ===== PLW V36 — MEMÓRIA REAL DA REUNIÃO / TRANSCRIPT NO LOCALSTORAGE ===== -->
 <script>
 (function(){
   'use strict';
@@ -6290,6 +6322,7 @@ Regras:
   };
 
   /* Migra imediatamente a reunião atual para o novo formato. */
+  window.__plwMem={ensureMemory,remember,archiveVisiblePersona,migrate};
   try{if(S.bookingMeeting)migrate(S.bookingMeeting)}catch(e){}
   console.log('[PLW] V36 — memória persistente da reunião: transcript completo no LocalStorage; excluir não apaga memória; salvar ideia não interrompe conversa');
 })();
@@ -8172,7 +8205,7 @@ const fold=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u03
 const C=n=>{try{return typeof plwCanonicalName==='function'?plwCanonicalName(String(n||'')):String(n||'').trim()}catch(e){return String(n||'').trim()}};
 const cap=(t,n)=>{t=String(t||'').replace(/\s+/g,' ').trim();return t.length>n?t.slice(0,n-1)+'…':t};
 const brandLbl=n=>{try{return bkBrandLbl(n)}catch(e){return '?'}};
-const LABEL={jj:'J.J. Purple',hal:'Analista',tony:'Creative Room',dirk:'Dirk The Truth'};
+const LABEL={jj:'J.J. Purple',hal:'Analista',tony:'TONY THEBOI$$',gendo:'Gendo Ikari',dirk:'Dirk The Truth'};
 
 /* ---------- despacho cru: ignora todos os wrappers antigos de bookerSample ---------- */
 async function rawSample(p,o){
@@ -8314,7 +8347,7 @@ function detectIntent(texts,pauta){
   const gen=/\b(novo|novos|nova|novas|sugir\w*|sugest\w*|suger\w*|ideia|ideias|cite|crie|criar|forme|formar|formasse|montar|monte|formacao)\b/.test(f);
   const tag=/\b(tags?|duplas?|tag team|tag teams)\b/.test(f),fac=/\b(factions?|stables?|faccao|faccoes)\b/.test(f);
   const road=/como (vamos|vou|a gente) levar|levar .{0,25}ate|caminho .{0,20}(ppv|final battle)|rumo ao|ate o (ppv|final battle)/.test(f);
-  const namesReq=/(preciso|precisa|quero|me de|me da|sugira|sugiram|cite|faltam|falta).{0,30}\b(nomes?|lutadores?)\b|quem (tu|voce|vc|voces|cs) (iria|colocaria|poria|botaria|chamaria|escolheria)|quem (entra|entraria|colocar|poderia|pode entrar)|novos nomes/.test(f)||/\bx\s*\?/i.test(last);
+  const namesReq=/(preciso|precisa|quero|me de|me da|sugira|sugiram|cite|faltam|falta).{0,30}\b(nomes?|lutadores?)\b|quem (tu|voce|vc|voces|cs) (iria|colocaria|poria|botaria|chamaria|escolheria)|quem (entra|entraria|colocar|poderia|pode entrar)|novos nomes/.test(f)||/\bx\s*\?/i.test(last)||/\b(?:que|quais)\s+lutadores?\b.{0,40}\b(?:indic|sugir|suger|sugest|coloc|escolh|cit)\w*|\bindic\w+\b.{0,25}\b(?:nomes?|lutadores?|vagas?)\b/.test(f);
   const nextShow=/(o que|oque|que).{0,25}(bookar|bookear|colocar|fazer|montar).{0,30}(proximo|prox|esse|nesse) show|card d[oe] (proximo|prox) show|proximo show/.test(f);
   const corrective=/\b(ja tem|ja esta|ja e|outra|outro|outros|outras|troque|troca|nao gostei|nao quero)\b/.test(f)&&f.split(' ').length<=14&&!tag;
   const prevIt=corrective?detectIntent((texts||[]).slice(0,-1),pauta):null;
@@ -8390,36 +8423,50 @@ function intentBlock(it,texts){
   }
   return L.join('\n');
 }
-function roleFor(key,it){
+function roleFor(key,it,mode){
   const k=it&&it.kind;
   if(k==='tag'||k==='faction'){const w=k==='tag'?'duplas':'factions';return {
     jj:'Dê AGORA as '+w+' pedidas (uma por brand), só com candidatos livres. Formato: "PLWAR: A + B — motivo".',
-    hal:'Escolha UMA das '+w+' já citadas e justifique com um número real (campanha V-D ou últimas lutas), ou troque uma por outro candidato livre.',
     tony:'Escolha uma ou duas das '+w+' da sala e dê o ângulo de história (por que funcionam juntos). Uma ideia curta.',
+    gendo:'Escolha uma das '+w+' já citadas, aponte o risco dela e troque UM nome por outro candidato livre.',
+    hal:'Escolha UMA das '+w+' já citadas e justifique com um número real (campanha V-D ou últimas lutas), ou troque uma por outro candidato livre.',
     dirk:'Dê as '+w+' pedidas com uma crítica curta a cada uma. Só candidatos livres.'}[key]}
   if(k==='names')return {
     jj:'Dê os '+it.n+' nome(s) agora, da lista de CANDIDATOS, cada um com o motivo em uma frase.',
-    hal:'Dos nomes já citados na sala, mantenha os que têm melhor campanha/forma e troque o mais fraco por outro CANDIDATO, com o número que justifica.',
     tony:'Escolha 1 ou 2 dos candidatos e diga que história cada um traz para essa luta (tensão com os outros nomes). Sem roteiro.',
+    gendo:'Dê 1 ou 2 nomes da lista de CANDIDATOS diferentes dos que J.J. citou e diga o risco de cada um.',
+    hal:'Dos nomes já citados na sala, mantenha os que têm melhor campanha/forma e troque o mais fraco por outro CANDIDATO, com o número que justifica.',
     dirk:'Dê os '+it.n+' nome(s) da lista de CANDIDATOS e critique o mais arriscado em uma frase.'}[key];
   if(k==='nextshow')return {
     jj:'Monte as 3 lutas do card, com o main event primeiro.',
-    hal:'Escolha a luta do card que mais se sustenta pelos números (campanha/forma) e a que menos, e diga por quê. Não recapitule o último show.',
     tony:'Escolha uma das lutas do card e dê o ângulo de história (promo, tensão, o que abre até o PPV). Sem decidir resultado.',
+    gendo:'Aponte a luta mais previsível do card e proponha trocar por algo mais ousado, só com DISPONÍVEIS.',
+    hal:'Escolha a luta do card que mais se sustenta pelos números (campanha/forma) e a que menos, e diga por quê. Não recapitule o último show.',
     dirk:'Diga qual luta do card é a mais fraca e por quê, com um fato do save, e proponha a troca.'}[key];
   if(k==='road')return {
     jj:'Proponha 2 ou 3 linhas de build pros shows semanais até o PPV.',
-    hal:'Aponte UM número ou resultado real que ajude ou atrapalhe uma das linhas, e diga qual você manteria.',
     tony:'Dê UM ângulo de build para os shows semanais (quem aparece, que tensão), sem decidir resultado.',
+    gendo:'Diga qual linha de build é a mais previsível e proponha uma mais ousada.',
+    hal:'Aponte UM número ou resultado real que ajude ou atrapalhe uma das linhas, e diga qual você manteria.',
     dirk:'Diga qual parte do caminho é fraca e por quê, com um fato do save.'}[key];
+  if(mode==='canon')return 'Responda só com o que está nos FATOS, em 1 ou 2 frases. Se não consta, diga que não consta no save. Não crie nada.';
+  if(mode==='booking')return {
+    jj:'Diga se gosta do caminho, o que mudaria e o que isso abre adiante (quem sai forte, quem precisa de algo para a disputa continuar viva). Se ele perguntou sua opinião, dê.',
+    tony:'Dê UM momento, estipulação ou escalada que esse caminho permite (apresentação, tensão, o que muda de uma luta para a outra). Sem decidir resultado.',
+    gendo:'Reaja ao que J.J. e a Creative Room acabaram de dizer: concorde ou discorde com um motivo, aponte UM risco ou consequência futura e, se fizer sentido, proponha outro nome do roster ou um caminho mais ousado. Não repita J.J.',
+    hal:'Confira o plano contra o save em 1 ou 2 frases: campeão, brand, lesão, histórico recente, continuidade. Se está consistente, diga isso curto. Só aponte conflito que esteja nos FATOS; plano futuro não precisa estar no save. Não tome o controle criativo.',
+    dirk:'Questione o plano com UM risco real do save e diga como você resolveria. Não recuse o plano.'}[key];
   return {
     jj:'Ajude a executar o que ele acabou de dizer: diga o que falta para fechar (quem, como chega lá, onde cai entre os shows e o PPV). Se ele perguntou sua opinião, dê.',
-    hal:'Compare a ideia dele com UMA alternativa, usando um número dos FATOS. Não recapitule o último show.',
     tony:'Dê UM ângulo de história que a ideia dele abre (tensão, motivo, o que vem depois). Sem decidir resultado.',
+    gendo:'Reaja ao que já foi dito: concorde ou discorde com motivo e traga um risco ou outro nome do roster.',
+    hal:'Compare a ideia dele com UMA alternativa, usando um número dos FATOS. Não recapitule o último show.',
     dirk:'Questione a ideia com UM fato real do save; se ele pediu ideias, dê as ideias e critique em uma frase.'}[key];
 }
-function validate(out,userAll,peers,it,texts,ctxText,key){
+
+function validate(out,userAll,peers,it,texts,ctxText,key,mode){
   const p=problems(out,userAll,peers);
+  if(mode==='booking'&&/n[ãa]o (h[áa]|existe|consta|tem|encontrei)[^.]{0,40}(registro|no save|nos fatos)|n[ãa]o est[áa] registrad|n[ãa]o posso afirmar|isso eu n[ãa]o tenho/i.test(out))p.push('Ele está decidindo o futuro: aceite o plano e opine. Não diga que não há registro nem que não consta no save.');
   if(/n[ãa]o vou (criar|sugerir|fazer)|n[ãa]o irei (criar|sugerir)/i.test(out))p.push('Ele PEDIU ideias. Dê as ideias agora, não recuse.');
   if(it&&(it.kind==='tag'||it.kind==='faction')){
     const taken=takenNames(),ex=userExclusions(texts),used=namesIn(out);
@@ -8453,30 +8500,36 @@ function commitments(m){
 /* ---------- regras (curtas) e personas (sem frases de exemplo para o modelo copiar) ---------- */
 const RULES=[
 '=== COMO FUNCIONA A PLW ===',
-'- Cada brand tem um show SEMANAL, só para CONSTRUIR história (promo, ataque, luta menor). A luta importante é no PPV.',
-'- Se ele fixou uma luta num PPV (ex.: Final Battle), ela FICA lá. Não mova para TV e não proponha de novo.',
-'- Nunca numere semana ("semana 8") e nunca invente data. Fale "no próximo show" ou "nos shows até o PPV".',
-'- Lutador só aparece no show da brand dele, salvo crossover pedido por ele.',
-'- Ele é o booker final. Se ele apresentou um plano (ex.: "ladder com A, B e C, A vence"), o plano VALE: ajude a montar o que falta. Não diga que está "forçado" nem reabra o plano. Só avise se um FATO contradiz (lesão, brand errada, título vago), citando o fato.',
-'- Se ele te corrigiu, aceite em meia frase e refaça certo, sem pedir desculpa.',
-'- Números e resultados: só os que estão nos FATOS. Nunca invente vitórias, hype, notas, rivalidades ou cenas. Sem o dado, diga "isso eu não tenho aqui".',
-'- Responda à ÚLTIMA fala dele. Se ele pediu nomes ou ideias, dê agora.',
-'- 1 a 4 frases, direto com "você", sem "E se...", sem roteiro de cena, sem resumir o que ele acabou de dizer.'
+'- FATOS DO SAVE = passado e estado atual (campeões, roster, resultados, rivalidades, recordes). Só isso é fato. Nunca invente luta, resultado, rivalidade, ataque, promo, aliança ou título do passado.',
+'- BOOKING ATUAL = plano futuro do head booker. Não é fato, mas vale como plano: não precisa existir no save e nunca deve ser rejeitado por isso.',
+'- Cada brand tem um show SEMANAL só para construir história; a luta decisiva fica no PPV. Não numere semana nem invente data: fale "no próximo show" ou "nos shows até o PPV".',
+'- Lutador só aparece no show da brand dele. Lesionado não luta.',
+'- Ele é o booker final. Você pode discordar com motivo e alternativa, mas não recusa nem reabre o plano dele. Se ele te corrigiu, aceite em meia frase e refaça.',
+'- AUTORIDADE DO HEAD BOOKER: o que ele DECIDE (afirma com clareza: "X ganha", "quero Y campeão", "será uma Ladder") é decisão de booking e vale acima de qualquer sugestão de persona. Você pode analisar, discordar, explicar consequências e sugerir alternativa, sempre como OPINIÃO. Você NÃO troca o vencedor, a estipulação ou a luta que ele decidiu por outra coisa; só ele muda. Se ele disse "não", o ponto está encerrado. Pergunta ou ideia dele ("deve?", "estou pensando em") NÃO é decisão: aí você debate livremente.',
+'- Hierarquia: 1) SAVE/CANON (passado real) 2) DECISÃO DO HEAD BOOKER (futuro) 3) J.J. 4) Gendo 5) Tony 6) Analista. "E no próximo?" = próxima etapa do plano atual; nunca reescreva o que ele já decidiu, a menos que ele peça para mudar.',
+'- Responda à ÚLTIMA fala dele, em 1 a 4 frases, falando direto com ele.'
 ].join('\n');
 
 const SYS={
- jj:'Você é J.J. Purple, booker parceiro do head booker da PLW, uma liga fictícia de um save de Journey of Wrestling. Seu trabalho é ajudar a EXECUTAR o que ele decide: quem entra, como chega lá e o que isso abre. O plano dele é o plano.',
- hal:'Você é o Analista da PLW. Compara opções pelos números reais do save (campanha V-D, últimas lutas, brand, lesão, títulos). Não recapitula o último show: escolhe uma opção e justifica com um número.',
- tony:'Você é a Creative Room da PLW. Dá ideias de história: motivo, tensão, o que a luta abre. Não decide resultado e não inventa passado.',
+ jj:'Você é J.J. Purple, booker principal da PLW, uma liga fictícia de um save de Journey of Wrestling, parceiro do head booker. Pensa no longo prazo: escolhe caminhos, constrói rivalidades e PPVs, sugere resultados e discorda dele com motivo quando achar necessário. O plano dele é o ponto de partida e o que ele decide vale: você opina, não reescreve.',
+ tony:'Você é TONY THEBOI$$, a voz criativa da PLW. Pensa em momentos, estipulações, apresentação e escalada, e traz ideias diferentes. Não decide resultado e não inventa passado.',
+ gendo:'Você é Gendo Ikari, segundo booker da PLW: cético e ousado. Reage ao que J.J. e a Creative Room acabaram de dizer, concorda ou discorda com motivo, aponta riscos, propõe outro nome do roster quando fizer sentido e pensa nas consequências futuras. Nunca repete J.J. Você NÃO substitui a decisão do head booker: discorda como opinião ("eu faria diferente porque...") e nunca reescreve luta, estipulação ou vencedor que ele decidiu.',
+ hal:'Você é o Analista da PLW (Hal Mercer). Confere fatos, histórico, resultados, campeões, hype e continuidade no save. Não assume o controle criativo e não recusa plano futuro por ele não estar no save.',
  dirk:'Você é Dirk The Truth, crítico honesto e severo da PLW. Questiona com UM fato real do save. Se ele pediu ideias, dá as ideias e critica em uma frase.'
 };
-const SYS_COMMON=' Fale em português do Brasil, como gente numa sala de booking: sem lista, sem título, sem aspas de roteiro. Nunca mostre raciocínio, nunca escreva em inglês, nunca use etiquetas como FATO ou SUGESTÃO. Nomes de lutadores: só os que aparecem nos FATOS.';
+const SYS_COMMON=' Fale em português do Brasil, como gente numa sala de booking: sem lista, sem título, sem aspas de roteiro. Nunca mostre raciocínio, nunca escreva em inglês, nunca use etiquetas como FATO ou SUGESTÃO. Nomes de lutadores: só os que aparecem nos FATOS ou no BOOKING ATUAL.';
+
 function sysFor(k){return (SYS[k]||SYS.jj)+SYS_COMMON}
 
 
-function transcript(m,skip){
-  return (m.messages||[]).filter(x=>x!==skip&&x.text&&x.text!=='…'&&(x.role==='user'||x.role==='persona')).slice(-8)
-    .map(x=>(x.role==='user'?'HEAD BOOKER (você fala com ele)':(LABEL[x.persona]||'equipe'))+': '+cap(x.text,420)).join('\n');
+function transcript(m,skip,fromU){
+  let msgs=(m.messages||[]).filter(x=>x!==skip&&x.text&&x.text!=='…'&&(x.role==='user'||x.role==='persona'));
+  if(fromU>0){
+    const ui=[];msgs.forEach((x,i)=>{if(x.role==='user')ui.push(i)});
+    const start=ui.length>fromU?ui[fromU]:(ui.length?ui[ui.length-1]:0);
+    msgs=msgs.slice(start);
+  }
+  return msgs.slice(-8).map(x=>(x.role==='user'?'HEAD BOOKER (você fala com ele)':(LABEL[x.persona]||'equipe'))+': '+cap(x.text,420)).join('\n');
 }
 
 function problems(out,userAll,peers){
@@ -8488,23 +8541,608 @@ function problems(out,userAll,peers){
   return p;
 }
 function tidy7(t){let o=t;try{o=removeRepeatedResponseText(o)}catch(e){}try{o=plwTrimSentences(o,8)||o}catch(e){}return String(o||'').trim()}
-function tidy(t){
+function tidy(t,key){
   let o=t;try{o=removeRepeatedResponseText(o)}catch(e){}
-  try{o=plwTrimSentences(o,4)||o}catch(e){}
+  try{o=plwTrimSentences(o,TRIM[key]||4)||o}catch(e){}
   return String(o||'').trim();
 }
 
+/* ---------- MEMÓRIA DE BOOKING (CANON x CURRENT x BOOKING) ---------- */
+const BK_STIP=[
+  [/\btlc\b|tables? ladders? (?:and|e) chairs?/,'TLC Match'],
+  [/\bladder\b/,'Ladder Match'],
+  [/steel cage|\bcage\b|\bjaula\b/,'Steel Cage'],
+  [/hell in a cell|\bhiac\b/,'Hell in a Cell'],
+  [/last man standing/,'Last Man Standing'],
+  [/\bi quit\b/,'I Quit'],
+  [/street fight/,'Street Fight'],
+  [/\btables?\b|\bmesas?\b/,'Tables Match'],
+  [/iron man/,'Iron Man'],
+  [/battle royal|royal rumble/,'Battle Royal'],
+  [/falls count anywhere/,'Falls Count Anywhere'],
+  [/money in the bank|\bmitb\b/,'Money in the Bank'],
+  [/\bno dq\b|sem desqualificacao/,'No DQ'],
+  [/no holds barred|\bnhb\b/,'No Holds Barred'],
+  [/\bhardcore\b/,'Hardcore'],
+  [/submission match/,'Submission Match'],
+  [/\bgauntlet\b/,'Gauntlet'],
+  [/\bambulance\b|\bambulancia\b/,'Ambulance Match'],
+  [/\bcasket\b|\bcaixao\b/,'Casket Match']
+];
+const BK_FUT=/\b(quero|queria|vou|vamos|pensei|pensando|acho que|e se|proximo show|proximo ppv|proximos|ele ganha|ele perde|ganha|ganhar|vence|vencer|perde|perder|bora|coloca|colocar|bookar|bookear|fazer|faco|montar|teremos|teria|seria|novamente|de novo)\b/;
+const BK_PAST=/\b(venceu|ganhou|perdeu|derrotou|foi|fez|aconteceu|atacou|enfrentou|lutou|defendeu|conquistou|ultimo show|ultimo ppv|ultima luta|ultimas lutas|semana passada|ontem|historico|recorde|campeao atual|quem e o campeao|quem e a campea|quem tem o|quem esta com|quantas vitorias|quantas derrotas|rivalidades? ativas?|rivalidade atual|quem esta lesionado|esta lesionado|estava|tinha|havia|ja (?:venceu|ganhou|perdeu|enfrentou|lutou|foi|tem|teve|fez))\b/;
+const BK_WIN=/\b(ganha|ganhar|ganhe|vence|vencer|venca|sai vencedor|sai campeao|vira campeao|leva a vitoria)\b/;
+const BK_LOSE=/\b(perde|perder|perca|sai derrotado|e derrotado)\b/;
+const BK_SAVE=/\b(salva isso|salva essa|salva esse|salva a ideia|salva ai|vamos guardar|guarda isso|guarda essa|fica decidido|anota isso|anota ai|anota essa)\b/;
+const BK_CONT=/^(e|ai|entao|mas|tambem|ele|ela|eles|elas|isso|esse|essa|nesse|nessa|sim|nao)\b/;
+const BK_MORE=/\b(tambem|mais um|mais uma|mais dois|mais duas)\b/;
+
+/* ===== AUTORIDADE DO HEAD BOOKER: QUESTION / PROPOSAL / DECISION + memória explícita de decisões ===== */
+const BK_Q_START=/^(quem|qual|quais|quando|onde|como|por que|porque|sera que|deve|devo|devemos|devia|deveria|voce acha|voces acham|vcs acham|o que (?:acha|acham|voce|vc)|que tal)\b/;
+const BK_Q_REQ=/\b(?:quero|queria) (?:saber|ver|ideias?|sugestoes?|nomes?|opiniao|entender|que (?:voce|vc|tu|voces|vcs))\b|^(?:me (?:de|da|diga|fala|fale|sugira)|sugira|sugiram|cite|fale|opine|analise|compare|explique)\b/;
+const BK_HEDGE=/\b(?:estou pensando|to pensando|tou pensando|tava pensando|estava pensando|pensando em|pensei em|pensei que|e se|talvez|acho que|acho q|queria|poderia|podia|poderiamos|podemos|posso|pode ser|pode ter|sera que|imagina|cogito|cogitando|considerando|que tal|na duvida|ou entao|tenho duvida|uma ideia|minha ideia)\b/;
+const BK_DEC=/\b(?:quero|vai|vao|ganha|vence|perde|sera|serao|fechado|fechei|decidi|defini|escolho|escolhi|confirmo|confirmado|coloca|coloque|bota|bote|faremos|teremos)\b|\bvamos (?:fazer|colocar|botar|bookar|bookear|montar|ter|dar|levar|seguir|manter|usar|fechar|mudar|de)\b|\b(?:esta|fica) decidido\b/;
+const LEN={jj:'2 a 4 frases curtas.',tony:'1 a 3 frases curtas.',gendo:'2 a 4 frases curtas.',hal:'1 a 3 frases curtas.',dirk:'1 a 3 frases curtas.'};
+const MAXT={jj:260,tony:190,gendo:260,hal:190,dirk:200};
+const TRIM={jj:4,tony:3,gendo:4,hal:3,dirk:3};
+const PASSABLE={tony:true,hal:true};
+/* QUESTION = pergunta; PROPOSAL = ele está pensando; DECISION = afirmação decisiva; '' = nada */
+function bkClass(p){
+  const p0=String(p).replace(/,\s*(?:n[eé]|certo|ok|combinado|fechado|beleza|blz)\s*\?+\s*$/i,''),f=fold(p0);
+  if(/\?/.test(p0)||BK_Q_START.test(f)||BK_Q_REQ.test(f))return 'question';
+  if(BK_HEDGE.test(f))return 'proposal';
+  if(BK_DEC.test(f)||BK_WIN.test(f)||BK_LOSE.test(f))return 'decision';
+  if(BK_PAST.test(f))return '';
+  if(bkStip(f)||namesIn(p0).length>=2)return 'decision';
+  return '';
+}
+/* grava a decisão (type/subject/value/context/source). Mesma chave = ele mudou de ideia: a nova substitui a antiga. */
+function bkRec(st,rec,firm){
+  rec.type='decision';rec.source='user';rec.u=st._u||0;rec.final=!!firm;
+  rec.key=rec.key||[rec.kind,rec.when,rec.tid].join('|');
+  const ds=st.decisions||(st.decisions=[]),i=ds.findIndex(d=>d.key===rec.key);
+  if(i>=0){if(ds[i].value===rec.value)rec.final=true;ds.splice(i,1)}
+  ds.push(rec);
+  if(ds.length>16)ds.splice(0,ds.length-16);
+  if(rec.final)st.final=true;
+}
+function bkTopicOf(st,id){return [st.topic].concat(st.parked||[]).find(t=>t&&t.id===id)||null}
+/* "muda o Show 1", "quero mudar", "esquece essa ideia", "troca o vencedor": só isso reabre uma decisão */
+function bkReopen(st,f,raw){
+  if(/\?/.test(raw)||!st.decisions||!st.decisions.length)return '';
+  if(!/\b(?:muda|mudar|mude|mudei|troca|trocar|troque|esquece|esqueca|esquecer|desconsidera|desconsidere|cancela|cancelar|cancele|refaz|refazer|refaca|altera|alterar|altere|descarta|descartar|descarte)\b/.test(f))return '';
+  const forget=/\b(?:esquece|esqueca|esquecer|desconsidera|desconsidere|cancela|cancelar|cancele|descarta|descartar|descarte)\b|mudei de ideia/.test(f);
+  const when=bkWhen(f),nm=namesIn(raw),lastTid=(st.topic&&st.topic.id)||st.decisions[st.decisions.length-1].tid;
+  const onlyWin=/\b(?:vencedor|ganhador|resultado)\b/.test(f),onlyStip=!onlyWin&&/\b(?:estipulacao|stip)\b/.test(f);
+  let hit=st.decisions.filter(d=>when?d.when===when:d.tid===lastTid);
+  if(nm.length){const h2=hit.filter(d=>(d.names||[]).some(n=>nm.includes(n)));if(h2.length)hit=h2}
+  if(onlyWin)hit=hit.filter(d=>d.kind==='winner'||d.kind==='loser');
+  else if(onlyStip){hit.filter(d=>d.kind==='match').forEach(d=>{d.value=String(d.value).split(' — ')[0]});hit=hit.filter(d=>d.kind==='stip')}
+  if(!hit.length)return '';
+  hit.forEach(d=>{
+    const t=bkTopicOf(st,d.tid);if(!t)return;
+    const sp=d.when?(t.steps||[]).find(x=>x.when===d.when):null,tg=sp||t;
+    if(d.kind==='winner'){tg.winner='';if(tg===t&&t.focus===d.value)t.focus=t.names[0]||''}
+    if(d.kind==='loser')tg.loser='';
+    if(d.kind==='stip')tg.stip='';
+    if(!onlyWin&&!onlyStip&&d.when&&t.steps)t.steps=t.steps.filter(x=>x.when!==d.when);
+  });
+  st.decisions=st.decisions.filter(d=>!hit.includes(d));
+  if(forget&&!when&&!onlyWin&&!onlyStip&&st.topic&&st.topic.id===lastTid)st.topic=null;
+  return forget?'drop':'edit';
+}
+function decBlock(st){
+  const ds=(st&&st.decisions)||[];
+  if(!ds.length)return '';
+  const L=['=== DECISÕES DO HEAD BOOKER (BOOKING DECISION: valem acima de qualquer sugestão; não são fatos do save) ==='];
+  ds.slice(-10).forEach(d=>L.push('- '+d.subject+': '+d.value+(d.context&&d.context!==d.value?' ['+d.context+']':'')+(d.final?' — ENCERRADO, sem debate':'')));
+  L.push('Você pode analisar, discordar, explicar consequências e sugerir alternativa, sempre como OPINIÃO. Você NÃO troca vencedor, estipulação nem luta decididos por outra coisa; só ele muda. "E no próximo?" = próxima etapa deste plano: não reescreva o que já está decidido.');
+  return L.join('\n');
+}
+function clsLine(st,mode){
+  if(mode!=='booking'||!st)return '';
+  const L=[];
+  if(st.changed)L.push('MUDANÇA PEDIDA POR ELE: "'+st.changed+'". Ele mandou mudar isso: aceite em meia frase. Só o que ele mandou mudar foi alterado; o resto continua decidido.');
+  if(st.cls==='decision')L.push('CLASSIFICAÇÃO DA ÚLTIMA FALA: DECISÃO. Ele decidiu'+(st.final?' e encerrou o assunto: NÃO debata mais esse ponto, aceite e siga':'')+'. Aceite ("Fechado" ou parecido) e depois discuta: analise, discorde com motivo, explique consequências, sugira alternativa como OPINIÃO. Nunca troque o vencedor, a estipulação ou a luta dele por outra, nem escreva "então vamos fazer" outra coisa.');
+  else if(st.cls==='proposal')L.push('CLASSIFICAÇÃO DA ÚLTIMA FALA: PROPOSTA. Ele está pensando alto (ainda NÃO decidiu): debate livre, opine e sugira alternativas. Não trate como fechado.');
+  else if(st.cls==='question')L.push('CLASSIFICAÇÃO DA ÚLTIMA FALA: PERGUNTA. Responda e opine; não é uma decisão dele.');
+  return L.join('\n');
+}
+function roleDecision(key,st,mode,canPass){
+  if(mode!=='booking'||!st)return '';
+  const fin=st.final?' Ele encerrou este ponto: não debata mais o vencedor nem a decisão.':'';
+  if(st.changed&&st.cls!=='decision')return 'Ele mandou mudar algo. Aceite em meia frase e diga em 1 a 3 frases o que isso muda na prática, sem reabrir o que ele não mandou mudar.';
+  if(st.cls!=='decision')return '';
+  const halOk=canPass?'Se estiver tudo certo, basta "Continuidade ok." Se não houver nada a conferir, responda só [PASSO].':'Se estiver tudo certo, basta "Continuidade ok."';
+  return ({
+    jj:'Ele decidiu. Em 2 a 4 frases: aceite ("Fechado") e diga por que funciona, ou o problema real e como resolvê-lo COM a decisão dele. Pode discordar como opinião, sem propor outra decisão no lugar.'+fin,
+    tony:'Ele decidiu. Em 1 a 3 frases, diga o que a decisão dele permite de bom (momento, tensão, escalada). Não mude luta, vencedor nem estipulação.'+fin,
+    gendo:'Ele decidiu. Você é o segundo booker e PODE discordar, em 2 a 4 frases ("Eu faria diferente porque..."), mas como opinião: não reescreva luta, vencedor ou estipulação dele e não diga "vamos fazer" outra coisa.'+fin,
+    hal:'Confira a decisão contra o save em 1 a 3 frases (campeão, brand, lesão, continuidade). '+halOk+' Não tome o controle criativo.'+fin,
+    dirk:'Critique a decisão em UMA frase com um fato do save, sem pedir que ele mude.'+fin
+  })[key]||'';
+}
+/* rede de segurança: a persona não pode virar "então vamos fazer outra coisa" */
+function decisionProblems(out,st,key,mode){
+  const ds=(st&&st.decisions)||[];
+  if(!ds.length||mode!=='booking'||(st&&st.changed))return [];
+  const f=fold(out),p=[];
+  const take=/\b(?:entao )?(?:vamos|vou|bora) (?:fazer|mudar|trocar|colocar|botar|bookar|bookear|de)\b|\bmudo (?:para|pra)\b|\bmudei (?:para|pra)\b|\bfica assim\b|\b(?:fica|ficou) (?:decidido|definido)\b|\bnovo plano\b/.test(f);
+  const so=bkStip(f);
+  const decStips=ds.map(d=>(d.kind==='stip'||d.kind==='match')?bkStip(fold(d.value)):'').filter(Boolean);
+  if(take&&so&&decStips.length&&!decStips.includes(so))p.push('Ele JÁ decidiu a estipulação ('+decStips[decStips.length-1]+'). Não troque por '+so+': você pode opinar, mas a decisão continua dele.');
+  ds.filter(d=>d.kind==='winner'&&d.value).forEach(D=>{
+    const W=C(D.value),grp=ds.filter(x=>x!==D&&x.tid===D.tid&&x.when===D.when),ppl=[...new Set(grp.flatMap(x=>x.names||[]).concat(D.names||[]).map(C))].filter(n=>n&&n!==W);
+    const bad=ppl.find(P=>bkAllPos(P,f).some(pos=>{
+      const after=f.slice(pos,pos+50),before=f.slice(Math.max(0,pos-34),pos);
+      if(!/\b(?:ganha|ganhar|vence|vencer|vencedor|vitoria)\b/.test(after.slice(0,40)))return false;
+      if(/\b(?:depois|proximo|proxima|revanche|mais tarde|na volta)\b/.test(after))return false;
+      const op=/\b(?:eu faria|eu iria|eu preferia|eu colocaria|eu apostaria|eu botaria|eu daria|na minha opiniao|na minha visao)\b/.test(before);
+      return D.final||(take&&!op);
+    }));
+    if(bad)p.push('Ele JÁ decidiu que '+D.value+' vence'+(D.final?' e encerrou o assunto':'')+'. Não diga que '+bad+' deve ou vai ganhar nem reabra o vencedor: aceite e opine sobre as consequências.');
+  });
+  return p;
+}
+function decisionFallback(key,st){
+  const ds=(st&&st.decisions)||[],d=ds[ds.length-1],what=d?(d.kind==='winner'?d.value+' vence':d.value):'a sua decisão';
+  return ({
+    jj:'Fechado: '+what+'. A decisão é sua e eu sigo com ela; o que falta é construir o caminho até lá.',
+    tony:'Com isso fechado, dá para construir a tensão em cima da sua decisão.',
+    gendo:'Eu teria feito diferente, mas a decisão é sua e eu sigo com ela.',
+    hal:'',
+    dirk:'Anotado: é a sua decisão.'
+  })[key]||'';
+}
+function isPass(out){return /^\W*(?:\[\s*passo\s*\]|passo)\W*$/i.test(String(out||'').trim())}
+
+function bkHash(s){let h=0;s=String(s);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h).toString(36)}
+function bkStip(f){for(const [rx,n] of BK_STIP)if(rx.test(f))return n;return ''}
+function bkAllPos(n,f){
+  const parts=fold(n).split(' ').filter(Boolean);
+  const cands=[...new Set([fold(n),parts.slice(0,2).join(' '),parts.slice(0,2).join(''),parts[0],parts[parts.length-1]])].filter(x=>x&&x.length>=4);
+  const out=[];
+  cands.forEach(c=>{const rx=new RegExp('(?:^| )'+c+'(?= |$)','g');let m;while((m=rx.exec(f))){out.push(m.index+(m[0][0]===' '?1:0))}});
+  return out;
+}
+function bkAskPast(f,raw){
+  const q=/\?/.test(raw)||/^(quem|qual|quais|quando|onde|quantos|quantas|foi|ja|o que|oque)\b/.test(f);
+  return q&&BK_PAST.test(f)&&!/^(quero|queria|vou|vamos|pensei|pensando|tava pensando|e se|acho que)\b/.test(f);
+}
+function bkMode(raw,st){
+  const f=fold(raw);
+  if(bkAskPast(f,raw))return 'canon';
+  if(BK_FUT.test(f)||bkPpvIn(f))return 'booking';
+  if(bkStip(f)&&namesIn(raw).length>=2)return 'booking';
+  if(st&&st.topic&&f.split(' ').length<=14)return 'booking';
+  return 'open';
+}
+function bkExplicitShift(f){
+  if(/\b(mudando de assunto|mudar de assunto|outro assunto|novo assunto|proximo assunto|sobre outra coisa|deixa isso|esquece isso)\b/.test(f))return true;
+  if(/\bvamos falar (?:d|sobre)/.test(f))return true;
+  return /\bagora\b/.test(f)&&/\b(falar|ver|pensar|passar|vamos)\b/.test(f)&&/\b(d[oae]s?|pr[oa]|para|sobre)\b/.test(f);
+}
+function bkPpvIn(f){return ppvNames().find(p=>{const q=fold(p);return q&&new RegExp('(?:^| )'+q+'(?: |$)').test(f)})}
+function bkWhen(f){
+  const pn=bkPpvIn(f);
+  if(pn)return pn;
+  const shN=f.match(/\bshow\s*(\d+)\b/);if(shN)return 'Show '+shN[1];
+  const c=f.match(/proxim[oa]s\s+(\d+|dois|duas|tres|quatro|cinco)\s+(?:shows?|programas?|semanas?)/);
+  if(c)return 'próximos '+(+c[1]||NUMW[c[1]])+' shows';
+  if(/proximo ppv|proximo evento/.test(f))return 'próximo PPV';
+  if(/proximo show|prox show|proximo programa|show seguinte|semana que vem/.test(f))return 'próximo show';
+  return '';
+}
+function bkOutcome(target,t,f,nm){
+  const pick=vi=>{
+    let best='',bp=-1;
+    [...new Set(nm.concat(t.names))].forEach(n=>{bkAllPos(n,f).forEach(p=>{if(p<vi&&p>bp){bp=p;best=n}})});
+    if(best)return best;
+    if(/\b(ele|ela)\b/.test(f.slice(Math.max(0,vi-25),vi)))return t.focus||t.winner||t.names[0]||'';
+    return '';
+  };
+  const w=f.match(BK_WIN),l=f.match(BK_LOSE);
+  if(w){const n=pick(w.index);if(n){target.winner=n;if(target===t)t.focus=n}}
+  if(l){const n=pick(l.index);if(n)target.loser=n}
+}
+function bkStepText(t,s){
+  const stip=s.stip||t.stip||'luta';
+  let x=s.rep?'repete a '+stip:stip;
+  if(s.title)x+=' pelo título';
+  const who=(s.names||[]).join(', ');
+  const extra=s.open?s.open+' vaga(s) em aberto':'';
+  if(who||extra)x+=' ('+[who,extra].filter(Boolean).join(' + ')+')';
+  if(s.winner)x+=', '+s.winner+' vence';
+  else if(s.loser)x+=', '+s.loser+' perde';
+  return x;
+}
+function bkBody(t){return !!(t&&(t.names.length||t.stip||t.steps.length||t.winner||t.loser))}
+function bkLabel(t,raw){
+  const who=t.names.slice(0,3).join(' x ');
+  if(t.stip||who)return [t.stip,who].filter(Boolean).join(' — ');
+  const m=String(raw||'').match(/(?:falar|ver|pensar)\s+(?:d[oae]s?|sobre)\s+([^.,;!?]{2,40})/i);
+  return m?cap(m[1],40):(t.label||cap(raw,40));
+}
+function bkNew(idx,raw){
+  return {id:'bk'+bkHash(raw)+idx,names:[],all:[],stip:'',winner:'',loser:'',focus:'',steps:[],lines:[],baseIds:(S.events||[]).map(e=>e.id),resolved:[],u0:idx,label:'',saved:false};
+}
+function bkUpdate(t,raw,st){
+  st=st||{};
+  const R={question:1,proposal:2,decision:3},fr=fold(raw);
+  const firm=/^nao\b/.test(fr)||/\b(?:ja decidi|ja falei|e isso|ponto final|sem discussao|nao vou mudar|nao muda|nao insista|nao insiste)\b/.test(fr);
+  const sents=(String(raw).match(/[^.;!?\n]+[.;!?]*/g)||[String(raw)]).map(x=>x.trim()).filter(x=>x.length>2);
+  let carry='';
+  sents.forEach(sent=>{
+    const c=bkClass(sent);
+    if((R[c]||0)>(R[st.cls]||0))st.cls=c;
+    sent.split(/\b(?:ai|entao|depois)\b|\s+e\s+(?=n[oa]s?\s)/i).map(x=>x.trim()).filter(x=>x.length>2).forEach(p=>{
+      const f=fold(p),own=bkWhen(f),nm=namesIn(p),stip=bkStip(f);
+      if(own)carry=own;
+      const when=own||carry,carried=!own&&!!carry;
+      nm.forEach(n=>{if(!t.all.includes(n))t.all.push(n)});
+      if(c!=='decision')return;   /* pergunta/proposta não vira plano nem resultado */
+      const rep=/\b(novamente|de novo|outra vez|repito|repetir|repete|mesma coisa|mesma luta|igual)\b/.test(f);
+      const title=/\b(pelo|pelos|valendo|titulo|belt|cinturao|campeonato)\b/.test(f);
+      const om=f.match(/\bmais\s+(\d+|um|uma|dois|duas|tres|quatro)\b/);
+      let tgt=t;
+      if(when){
+        const step={when,stip:stip||(rep?t.stip:''),rep:rep&&!stip,title,names:carried?[]:nm.slice(0,6),open:om?(+om[1]||NUMW[om[1]]||0):0,text:cap(p,140),winner:'',loser:''};
+        bkOutcome(step,t,f,nm);
+        const i=t.steps.findIndex(x=>x.when===when);
+        if(i>=0){
+          const o=t.steps[i];
+          t.steps[i]={when,stip:step.stip||o.stip,rep:step.stip?false:(step.rep||o.rep),title:step.title||o.title,names:step.names.length?step.names:o.names,open:step.open||o.open,text:carried?o.text:step.text,winner:step.winner||o.winner,loser:step.loser||o.loser};
+          tgt=t.steps[i];
+        }else{t.steps.push(step);tgt=step}
+      }else{
+        if(stip)t.stip=stip;
+        nm.forEach(n=>{if(!t.names.includes(n))t.names.push(n)});
+        bkOutcome(t,t,f,nm);
+      }
+      /* memória explícita da decisão */
+      const tn=((when?tgt.names:t.names)||[]).slice(0,6),scope=[when,tn.slice(0,3).join(' vs ')].filter(Boolean).join(': ')||t.label||'booking';
+      const ctx=[when,stip||tgt.stip||t.stip,tn.slice(0,4).join(' vs ')].filter(Boolean).join(' • ');
+      const rec=(kind,subject,value,extra)=>bkRec(st,Object.assign({kind,subject,value,context:ctx,names:tn,when:when||'',tid:t.id},extra||{}),firm);
+      let done=false;
+      if(nm.length>=2){rec('match','Luta'+(when?' — '+when:''),nm.join(' vs ')+(stip?' — '+stip:''),when?{}:{key:'match||'+nm.map(fold).sort().join('+')});done=true}
+      else if(stip){rec('stip','Estipulação — '+scope,stip);done=true}
+      const sc=w=>(scope&&scope!==w?' — '+scope:'');
+      if(BK_WIN.test(f)&&tgt.winner){rec('winner','Vencedor'+sc(tgt.winner),tgt.winner);done=true}
+      if(BK_LOSE.test(f)&&tgt.loser){rec('loser','Perdedor'+sc(tgt.loser),tgt.loser);done=true}
+      if(!done&&(nm.length||f.split(' ').length>=3)){rec('other',nm.length?nm.slice(0,2).join(' / '):'Booking',cap(p,140),{key:'other||'+bkHash(f)})}
+    });
+  });
+  t.names=t.names.slice(0,8);
+  if(!t.focus&&t.names.length)t.focus=t.names[0];
+}
+function bkIngest(st,raw,idx){
+  const f=fold(raw),mode=bkMode(raw,st);
+  st.mode=mode;st.save=false;st.cls='';st.final=false;st.changed='';st._u=idx;
+  if(!Array.isArray(st.decisions))st.decisions=[];
+  if(bkReopen(st,f,raw))st.changed=cap(raw,200);
+  if(mode==='canon'){st.cls='question';return}
+  const nm=namesIn(raw),t0=st.topic;
+  let shift=false;
+  if(t0&&bkBody(t0)){
+    if(bkExplicitShift(f))shift=true;
+    else if(nm.length&&!nm.some(n=>t0.all.includes(n))&&f.split(' ').length>=3&&!BK_CONT.test(f)&&!BK_MORE.test(f))shift=true;
+  }
+  if(shift){
+    const back=st.parked.find(p=>nm.some(n=>p.all.includes(n)));
+    st.parked=[t0].concat(st.parked.filter(p=>p!==back)).slice(0,3);
+    st.topic=back||null;
+    if(back)back.u0=idx;
+  }
+  if(!st.topic&&(mode==='booking'||shift))st.topic=bkNew(idx,raw);
+  const t=st.topic;
+  if(!t)return;
+  if(mode==='booking'||shift){
+    bkUpdate(t,raw,st);
+    t.lines.push(cap(raw,260));
+    t.lines=t.lines.slice(-6);
+    t.label=bkLabel(t,raw);
+  }
+  if(BK_SAVE.test(f)&&bkBody(t))st.save=true;
+}
+function bkSummary(t){
+  const L=[];
+  const who=t.names.join(' x ');
+  L.push('Luta: '+(t.stip||'luta')+(who?' — '+who:''));
+  if(t.winner)L.push('Vencedor planejado: '+t.winner);
+  if(t.loser&&!t.winner)L.push('Perdedor planejado: '+t.loser);
+  t.steps.forEach(s=>L.push(s.when+': '+bkStepText(t,s)));
+  return L.join('\n');
+}
+function bkSavePlan(t){
+  S.plans=S.plans||[];
+  const x=bkSummary(t),i=S.plans.findIndex(p=>p&&p.bkId===t.id);
+  if(i>=0)S.plans[i].x=x;
+  else S.plans.unshift({t:'📌 '+new Date().toLocaleDateString('pt-BR')+' • booking: '+cap(t.label||'plano',50),x,ai:false,bk:true,bkId:t.id});
+  t.saved=true;
+  persist();
+  toast('📌 Plano salvo em PLANOS.');
+}
+function bkReconcile(t){
+  if(!t||t.names.length<2)return;
+  const seen=new Set(t.baseIds||[]),want=t.names.map(C),need=Math.min(want.length,3);
+  (S.events||[]).forEach(ev=>{
+    if(seen.has(ev.id))return;
+    let hit=false;
+    (ev.matches||[]).forEach(m=>{
+      const P=new Set((m.participants||[]).map(C));
+      if(want.filter(n=>P.has(n)).length<need)return;
+      if(t.stip&&fold(m.stipulation||'').indexOf(fold(t.stip).split(' ')[0])<0)return;
+      let txt=(ev.name||'evento')+': '+matchLine(m);
+      if(t.winner&&m.winner&&fold(m.winner).indexOf(fold(t.winner).split(' ').pop())<0)txt+=' (o plano era '+t.winner+' vencer)';
+      t.resolved.push({ev:ev.id,text:txt});
+      hit=true;
+    });
+    if(hit)(t.baseIds=t.baseIds||[]).push(ev.id);
+  });
+}
+function bkBlock(st){
+  const t=st&&st.topic,dBlk=decBlock(st);
+  if(!t||!bkBody(t))return dBlk;
+  bkReconcile(t);
+  const L=['=== BOOKING ATUAL (plano do head booker: NÃO é fato do save, mas vale como plano) ==='];
+  L.push('Assunto: '+(t.label||'plano'));
+  const who=t.names.join(', ');
+  if(t.stip||t.names.length>1)L.push('Luta: '+(t.stip||'luta')+(who?' com '+who:''));
+  if(t.winner)L.push((t.resolved.length?'Plano original, vencedor: ':'Vencedor planejado: ')+t.winner);
+  if(t.loser&&!t.winner)L.push('Perdedor planejado: '+t.loser);
+  if(t.steps.length){L.push('Caminho planejado:');t.steps.forEach(s=>L.push('- '+s.when+': '+bkStepText(t,s)))}
+  if(t.lines.length){L.push('Últimas decisões dele, nas palavras dele:');t.lines.slice(-2).forEach(x=>L.push('- '+x))}
+  if(t.resolved.length){L.push('JÁ ACONTECEU NO SAVE (agora é canon, não trate como futuro):');t.resolved.slice(-3).forEach(r=>L.push('- '+r.text))}
+  if(t.saved)L.push('(este plano já está salvo em PLANOS)');
+  return (dBlk?dBlk+'\n\n':'')+L.join('\n');
+}
+function newBk(){return {v:1,n:0,topic:null,parked:[],mode:'open',save:false,decisions:[],cls:'',final:false,changed:'',_u:0}}
+function stateFor(scope,lines){
+  let st;
+  if(typeof scope==='string'){S.bkChats=S.bkChats||{};st=S.bkChats[scope]}else st=scope.bk;
+  if(!st||st.v!==1||st.n>lines.length)st=newBk();
+  if(!Array.isArray(st.decisions)){   /* estado antigo: reconstrói só as decisões, sem mexer no resto */
+    const tmp=newBk();
+    while(tmp.n<lines.length){bkIngest(tmp,lines[tmp.n],tmp.n);tmp.n++}
+    st.decisions=tmp.decisions;st.cls=tmp.cls;st.final=tmp.final;st.changed=tmp.changed;
+  }
+  while(st.n<lines.length){
+    const i=st.n;
+    bkIngest(st,lines[i],i);
+    st.n++;
+    if(i===lines.length-1&&st.save&&st.topic)bkSavePlan(st.topic);
+  }
+  if(typeof scope==='string')S.bkChats[scope]=st;else scope.bk=st;
+  return st;
+}
+const MODE_LINE={
+  booking:'MODO BOOKING FUTURO: ele está decidindo o que vai acontecer. Trate como plano (não como fato) e nunca diga que não há registro nem cobre que esteja no save. O que ele decidiu vale; dê sua opinião sobre isso: riscos, o que isso abre e, se discordar, como opinião (nunca como nova decisão). Só afirme passado que esteja nos FATOS.',
+  canon:'MODO CONSULTA AO SAVE: ele pergunta sobre o que já aconteceu ou sobre o estado atual. Responda só com os FATOS. Se a informação não consta nos FATOS, diga em uma frase que isso não consta no save. Não invente.',
+  open:''
+};
+
+/* ===== V46.1 — ESTADO DA LUTA (MATCH STATE) =====
+   O CÓDIGO monta a foto da luta a partir do que o head booker disse: evento, título, estipulação,
+   confirmados, vagas abertas, inelegíveis e a pergunta atual. As personas respondem a ISSO,
+   não a uma história nova. Camadas: CANON (save) > DECISÕES > RESTRIÇÕES (inelegíveis) > PERGUNTA. */
+const MS_PART=/\b(?:ladder|luta|match|card|vagas?|entra|entram|entrou|coloca|coloque|bota|bote|inclui|inclua|escolho|escolhi|fechei|fechado|esta|estao|dentro|confirmad\w+|participa\w*|disputa\w*|vs|x|fatal|triple|tlc|cage|gauntlet|vai estar|vao estar|vai lutar|vao lutar|lutam)\b/;
+const MS_NEG=/\bnao (?:podem|pode|entra|entram|devem|deve|cabe|cabem|vao entrar|vai entrar|quero|use|usem|cite|citem|coloque|coloquem|fica|ficam)\b|\bfora d[aeo]s?\b|\b(?:vetad[oa]s?|inelegiv\w+|eliminad[oa]s?)\b|\bfica(?:m)? de fora\b|\bja perderam?\b/;
+const MS_PASTV=/\b(?:venceu|ganhou|perdeu|derrotou|atacou|enfrentou|lutou)\b/;
+function msSentences(t){
+  return (String(t||'').match(/[^.;!?\n]+[.;!?]*/g)||[String(t||'')])
+    .flatMap(x=>x.split(/,\s*(?=(?:quem|qual|quais|que (?:lutadores?|nomes?)|como|o que|voc[eê]s?|vcs?)\b)/i))
+    .map(x=>x.trim()).filter(x=>x.length>2);
+}
+function msTitleIn(f){
+  const T=typeof TITLES!=='undefined'?TITLES:[];
+  for(const t of T){
+    const a=fold(t[0]),b=a.replace(/^plw /,''),c=b.replace(/ championship$/,'');
+    if(f.includes(a)||f.includes(b)||(c.length>=8&&f.includes(c)&&/\b(?:titulo|cinturao|campeonato|championship|belt)\b/.test(f)))return t[0];
+  }
+  return '';
+}
+function msNum(x){return +x||NUMW[x]||0}
+function msOpenCount(f){
+  let m=f.match(/\b(\d+|um|uma|dois|duas|tres|quatro|cinco)\s+(?:outras?\s+)?(?:vagas?|lugares?|slots?)\b/);
+  if(m)return msNum(m[1]);
+  m=f.match(/\b(?:mais|faltam|falta|restam|resta)\s+(\d+|um|uma|dois|duas|tres|quatro|cinco)\b/);
+  return m?msNum(m[1]):0;
+}
+function msTotal(f){
+  if(/\bfatal (?:4|four|quatro)\b|\b4 way\b|\bfour way\b/.test(f))return 4;
+  if(/\btriple threat\b|\bfatal (?:3|three|tres)\b|\b3 way\b|\bthree way\b/.test(f))return 3;
+  const m=f.match(/\b(?:de|com)\s+(\d+|tres|quatro|cinco|seis)\s+(?:lutadores|participantes)\b/);
+  return m?(+m[1]||({tres:3,quatro:4,cinco:5,seis:6})[m[1]]||0):0;
+}
+/* lê todas as falas dele (em ordem) e devolve o estado bruto; a fala mais recente vence */
+function msScan(lines){
+  const conf=[],inel=new Map(),R={title:'',event:'',stip:'',openN:0,total:0};
+  const addC=n=>{n=C(n);if(!n)return;inel.delete(n);if(!conf.includes(n))conf.push(n)};
+  const addI=(n,why)=>{n=C(n);if(!n)return;const i=conf.indexOf(n);if(i>=0)conf.splice(i,1);inel.set(n,why)};
+  lines.forEach(line=>{
+    msSentences(line).forEach(s=>{
+      const f=fold(s),isQ=/\?/.test(s)||BK_Q_START.test(f)||BK_Q_REQ.test(f),hedge=BK_HEDGE.test(f);
+      const tt=msTitleIn(f);if(tt)R.title=tt;
+      const ev=bkPpvIn(f);if(ev)R.event=ev;
+      const ot=msOpenCount(f);if(ot)R.openN=ot;
+      if(!isQ&&!hedge){const sp=bkStip(f);if(sp)R.stip=sp;const tw=msTotal(f);if(tw)R.total=tw}
+      if(isQ)return;
+      const nm=namesIn(s).map(C);if(!nm.length)return;
+      const pos=n=>{const p=bkAllPos(n,f);return p.length?Math.min(...p):-1};
+      const qual=/qualifica/.test(f);
+      const vm=f.match(/\b(?:venceu|venceram|derrotou|derrotaram|ganhou d[eo]|passou por)\b/);
+      const lose=f.match(/\b(?:perdeu|perderam|foi eliminad\w+|foram eliminad\w+)\b/);
+      /* "Je'Von venceu a qualificação contra Shota e Dominik": quem vence entra, quem perde sai */
+      if(qual&&vm){
+        nm.forEach(n=>{if(pos(n)<vm.index)addC(n);else addI(n,'perdeu a qualificação ('+cap(s,80)+')')});
+        return;
+      }
+      /* "Shota e Dominik não podem entrar porque perderam para Je'Von": só quem vem ANTES de "para/contra" sai */
+      if(MS_NEG.test(f)||(qual&&lose)){
+        let cut=f.length;
+        if(lose){const m=f.slice(lose.index).match(/\b(?:para|pra|contra|pelo|pela)\b/);if(m)cut=lose.index+m.index}
+        nm.forEach(n=>{if(pos(n)<cut)addI(n,'fora por decisão dele ('+cap(s,90)+')')});
+        return;
+      }
+      if(hedge||MS_PASTV.test(f))return;
+      if(MS_PART.test(f)||bkStip(f)||tt||ev)nm.forEach(addC);
+    });
+  });
+  R.conf=conf;R.inel=inel;
+  return R;
+}
+/* tipo da PERGUNTA: o que ele quer saber agora */
+function msQType(text){
+  const raw=String(text||''),f=fold(raw),Q=/\?/.test(raw)||BK_Q_START.test(f)||BK_Q_REQ.test(f);
+  const vag=/\b(?:vagas?|lugares?|slots?)\b/.test(f);
+  if(vag&&(Q||/\b(?:quem|quais|que|nomes?|lutadores?|indic\w*|sugir\w*|sugest\w*|suger\w*)\b/.test(f)))return 'slots';
+  if(/\bquem\s+(?:entra|entraria|deve entrar|deveria entrar|pode entrar|preenche|ocupa|completa)\b/.test(f))return 'slots';
+  if(/\b(?:que|quais)\s+(?:lutadores?|nomes?)\b.{0,40}\b(?:entra\w*|indic\w*|coloc\w*|escolh\w*|sugir\w*|suger\w*|sugest\w*|botar|poria|iria)\b/.test(f))return 'slots';
+  if(/\b(?:me\s+(?:de|deem|da|dao)|sugira|sugiram|indique|indiquem|cite|citem)\b.{0,30}\b(?:nomes?|lutadores?)\b/.test(f))return 'slots';
+  if(/\bquem\s+(?:ganha|vence|leva|sai campeao|deve ganhar|deve vencer|deveria ganhar|deveria vencer)\b|\bquem\s+(?:e|seria)\s+o\s+vencedor\b/.test(f))return 'winner';
+  if(/\bcomo\s+(?:construir|construo|levar|levo|montar|monto|chegar|vamos construir|vamos levar)\b|\b(?:storyline|build|construcao|caminho)\b/.test(f))return 'build';
+  return '';
+}
+function msElsewhere(event,conf){
+  const out=new Set();
+  try{
+    const p=(S.ppvPlans||{})[ppvKey(event||nextPPV())];
+    ((p&&p.card)||[]).forEach(mt=>{
+      const a=(mt.a||[]).filter(Boolean).map(C);
+      if(!a.length||a.some(n=>conf.includes(n)))return;
+      a.forEach(n=>out.add(n));
+    });
+  }catch(e){}
+  return out;
+}
+function msPool(ms,max){
+  const excl=new Set([...ms.conf,...ms.inel.keys(),...ms.elsewhere].map(C));
+  const brands=ms.brand?[ms.brand]:BR_ALL;
+  let all=[];brands.forEach(b=>{all=all.concat(candidates(b,excl,max))});
+  return all.sort((a,b)=>b.sc-a.sc).slice(0,max);
+}
+/* foto da luta. Devolve null se ele ainda não fixou nada sobre uma luta. */
+function matchState(lines,pauta,st){
+  lines=(lines||[]).map(x=>String(x||'')).filter(x=>x.trim());
+  if(!lines.length)return null;
+  const last=lines[lines.length-1],R=msScan(lines);
+  if(!(R.conf.length||R.stip||R.title||R.openN||R.inel.size))return null;
+  const qtype=msQType(last);
+  let open=R.openN;if(!open&&R.total)open=Math.max(0,R.total-R.conf.length);
+  const T=typeof TITLES!=='undefined'?TITLES:[],trow=R.title?T.find(t=>t[0]===R.title):null;
+  let brand='';
+  if(trow){brand=trow[1]==='GLOBAL'?'':trow[1]}
+  else{
+    const c={};R.conf.forEach(n=>{const b=brandOfName(n);if(b)c[b]=(c[b]||0)+1});
+    const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
+    brand=top?top[0]:workBrand(lines,pauta);
+  }
+  const ms={event:R.event,title:R.title,stip:R.stip,conf:R.conf,inel:R.inel,open,openExplicit:!!R.openN,qtype,q:last,brand,
+    champ:R.title?((S.titles[R.title]||{}).champ||''):'',elsewhere:msElsewhere(R.event,R.conf),pool:[]};
+  if(qtype==='slots')ms.pool=msPool(ms,10);
+  return ms;
+}
+function matchBlock(ms){
+  if(!ms)return '';
+  const L=['=== ESTADO DA LUTA (montado pelo código a partir do que ELE disse; é a fonte de verdade desta pergunta) ==='];
+  if(ms.event)L.push('EVENTO: '+ms.event);
+  if(ms.title)L.push('TÍTULO: '+ms.title+(ms.champ?' (campeão atual: '+ms.champ+')':''));
+  if(ms.stip)L.push('ESTIPULAÇÃO: '+ms.stip+' (decisão dele; não trocar nem criar outra)');
+  L.push('CONFIRMADOS NA LUTA (já estão; não alterar e não indicar de novo): '+(ms.conf.map((n,i)=>(i+1)+'. '+n).join('; ')||'nenhum'));
+  if(ms.open){
+    const s=[];for(let i=1;i<=ms.open;i++)s.push('vaga '+(ms.conf.length+i));
+    L.push('VAGAS ABERTAS: '+ms.open+' ('+s.join(', ')+')');
+  }
+  if(ms.inel.size)L.push('INELEGÍVEIS (PROIBIDO citar ou sugerir para esta luta): '+[...ms.inel].map(([n,w])=>n+' — '+w).join('; '));
+  if(ms.elsewhere.size)L.push('JÁ ESTÃO EM OUTRA LUTA DO CARD (não usar aqui): '+[...ms.elsewhere].join(', '));
+  L.push('PERGUNTA ATUAL DELE: "'+cap(ms.q,240)+'"');
+  L.push('TIPO DA PERGUNTA: '+({slots:'ELENCO — quem ocupa as vagas abertas',winner:'VENCEDOR — quem ganha',build:'CONSTRUÇÃO — como levar/construir'}[ms.qtype]||'livre'));
+  if(ms.qtype==='slots'){
+    L.push('CANDIDATOS PARA AS VAGAS (brand '+(ms.brand?BR_NAME[ms.brand]:'qualquer')+', saudáveis, sem confirmados, sem inelegíveis) — USE SÓ ESTES:');
+    if(ms.pool.length)ms.pool.forEach(c=>L.push(candLine(c)));else L.push('(ninguém livre na brand)');
+    L.push('Motivo de cada nome: só com dado da lista acima (campanha V-D, últimas lutas, alinhamento, título). Proibido inventar ataque, rivalidade, passado ou resultado para justificar o nome.');
+  }
+  L.push('REGRAS DESTA PERGUNTA: RESPONDA PRIMEIRO À PERGUNTA ATUAL. Não reabra decisões anteriores. Não altere os confirmados. Não sugira inelegíveis. Não crie nova estipulação. Não transforme pergunta de elenco em storyline. Se a pergunta é \"quem entra?\", indique nomes; se é \"quem ganha?\", discuta o vencedor; só se for \"como construir?\" discuta storyline.');
+  return L.join('\n');
+}
+function msRole(key,ms){
+  if(!ms||ms.qtype!=='slots')return '';
+  const need=ms.open||2,nn=need===1?'1 nome':need+' nomes';
+  return {
+    jj:'Dê AGORA '+nn+' da lista de CANDIDATOS para as vagas abertas, cada um com UMA frase de motivo (campanha, forma, alinhamento, título). Sem storyline, sem repetir os confirmados.',
+    tony:'Escolha 1 ou 2 nomes da lista de CANDIDATOS que ainda não foram citados nesta rodada e diga, em uma frase cada, que estilo ou tensão cada um traz contra os CONFIRMADOS. Sem roteiro e sem inventar passado.',
+    gendo:'Questione UM nome que J.J. ou Tony citaram (risco real) e ofereça outro da lista de CANDIDATOS no lugar. Não repita J.J.',
+    hal:'Dos nomes já citados na sala, diga quais se sustentam pelos números dos FATOS (V-D, últimas lutas, lesão, brand) e qual você trocaria por outro CANDIDATO. Não recapitule o último show.',
+    dirk:'Dê '+nn+' da lista de CANDIDATOS e critique o mais arriscado em uma frase.'
+  }[key]||'';
+}
+/* "eu iria de Kevin" = indica; "com Kevin já dentro" = só menciona */
+const MS_REC=/\b(?:iria de|iria com|indico|indicaria|colocaria|poria|botaria|escolho|escolheria|apostaria (?:em|no|na)|voto (?:em|no|na)|levaria|gosto d[eo]|prefiro|meu palpite|sugiro|proponho|quero)\b/;
+function msRecommends(out,n){
+  const f=fold(out);
+  return bkAllPos(n,f).some(p=>{
+    const before=f.slice(Math.max(0,p-50),p),seg=before.split(/[,:;]| e (?=[a-z]+ [a-z]+ (?:e|ou)\b)/).pop();
+    const after=f.slice(p,p+45);
+    if(MS_REC.test(seg)&&!/\b(?:com|contra|alem d\w+|ao lado d\w+|junto|entre|ja)\b/.test(seg))return true;
+    if(/\b(?:entra|entram|ocupa|ocupam|fica com a vaga|merece a vaga)\b/.test(after)&&!/\bja\b/.test(before.slice(-14)))return true;
+    return false;
+  });
+}
+function msProblems(out,ms,key){
+  if(!ms)return [];
+  const p=[],used=[...new Set(namesIn(out).map(C))];
+  const bad=used.filter(n=>ms.inel.has(n));
+  if(bad.length)p.push(bad.join(', ')+' está INELEGÍVEL para esta luta. Não cite.');
+  if(ms.qtype==='slots'){
+    const poolSet=new Set(ms.pool.map(c=>c.n));
+    const conflicts=ms.conf.filter(n=>msRecommends(out,n));
+    if(conflicts.length)p.push(conflicts.join(', ')+' JÁ está confirmado na luta. Indique só nomes NOVOS da lista de CANDIDATOS para as vagas abertas.');
+    const off=used.filter(n=>!ms.conf.includes(n)&&!ms.inel.has(n)&&!poolSet.has(n));
+    if(off.length)p.push(off.join(', ')+' não está na lista de CANDIDATOS. Use só a lista.');
+    if(key!=='hal'&&!used.some(n=>poolSet.has(n)))p.push('A pergunta é quem ocupa as vagas: dê nomes da lista de CANDIDATOS, sem contar história.');
+  }
+  return p;
+}
+/* rede de segurança: sem candidatos ou violação persistente → linha montada só com dados do save */
+function msFallback(key,ms,priv){
+  if(!ms||ms.qtype!=='slots'||!ms.pool.length)return '';
+  const pick=ms.pool.slice(0,Math.max(1,Math.min(ms.open||2,3)));
+  const txt=pick.map(c=>c.n+' ('+(c.w.w||0)+'V-'+(c.w.l||0)+'D'+(c.fm?', últimas lutas '+c.fm:'')+')').join(' e ');
+  if(key==='jj'||key==='dirk'||priv)return 'Para as vagas abertas eu iria de '+txt+'. É o que os números da brand sustentam agora.';
+  return '';
+}
+
 /* ---------- REUNIÃO ---------- */
+function meetingLines(m,latest){
+  let rows=[];
+  try{
+    const mem=window.__plwMem;
+    if(mem){mem.migrate(m);rows=mem.ensureMemory(m).filter(x=>x.role==='user'&&x.text).map(x=>String(x.text))}
+  }catch(e){}
+  if(!rows.length)rows=userLines(m);
+  if(latest&&rows[rows.length-1]!==latest)rows.push(latest);
+  return rows;
+}
+
 window.meetingRunPanel=async function(phase,userText){
   const meeting=S.bookingMeeting;if(!meeting||busy)return;
   try{meetingStateEnsure(meeting)}catch(e){}
   const token=String(Date.now())+':'+Math.random().toString(36).slice(2);
   meeting.runId=token;busy=true;window.__mtgRunning=true;
-  const users=userLines(meeting);
-  const last=String(userText||users[users.length-1]||'').trim();
+  const last=String(userText||userLines(meeting).slice(-1)[0]||'').trim();
   const pauta=[meeting.modeLabel,meeting.target].filter(Boolean).join(' • ')||'reunião livre';
   try{
-    const voices=['jj','hal','tony'];
+    const users=meetingLines(meeting,last);
+    let st;try{st=stateFor(meeting,users)}catch(e){st={topic:null,mode:'open'}}
+    const mode=st.mode||'open';
+    const u0=st.topic?Math.min(st.topic.u0||0,Math.max(0,users.length-1)):0;
+    const scope=users.slice(u0);
+    let bb='';try{bb=mode==='canon'?'':bkBlock(st)}catch(e){}
+    let ms=null;try{ms=mode==='canon'?null:matchState(scope,pauta,st)}catch(e){console.warn('[V46.1 estado]',e)}
+    if(ms)try{console.log('[PLW V46.1] ESTADO DA LUTA',{evento:ms.event,titulo:ms.title,stip:ms.stip,confirmados:ms.conf,vagas:ms.open,inelegiveis:[...ms.inel.keys()],pergunta:ms.qtype,pool:ms.pool.map(c=>c.n)})}catch(e){}
+    const mb=ms?matchBlock(ms):'';
+    const fixed=bb?'':commitments(meeting);
+    const voices=['jj','tony','gendo','hal'];
     for(let i=0;i<voices.length;i++){
       if(S.bookingMeeting!==meeting||meeting.runId!==token)break;
       const key=voices[i];
@@ -8513,31 +9151,41 @@ window.meetingRunPanel=async function(phase,userText){
       const round=meeting.messages.slice(meeting.messages.map(x=>x.role).lastIndexOf('user')+1).filter(x=>x!==message&&x.role==='persona'&&x.text&&x.text!=='…');
       const older=meeting.messages.filter(x=>x!==message&&x.role==='persona'&&x.persona===key&&x.text&&x.text!=='…').slice(-1);
       const peers=round.concat(older).map(x=>x.text);
-      const it=detectIntent(users,pauta);
-      const br=it&&it.brand?it.brand:(it&&it.brands&&it.brands.length===1?it.brands[0]:workBrand(users,pauta));
-      const fx=facts(users.slice(-3).join(' \n ')||pauta,{texts:users.slice(-3).concat([pauta]),extraNames:meeting.wrestlers||[],brand:br});
-      const ib=intentBlock(it,users);
-      const base=[
-        RULES,'',fx,'',ib,ib?'':undefined,
-        'PAUTA DA REUNIÃO: '+pauta,
-        commitments(meeting)?'O QUE ELE JÁ FIXOU EM PPV (decisão final, não reabra):\n'+commitments(meeting):'',
-        '','ÚLTIMAS FALAS DELE (mais recente por último; tudo que ele decidiu vale):\n'+users.slice(-4).map(t=>'- '+cap(t,260)).join('\n'),
-        '','CONVERSA ATÉ AGORA:\n'+(transcript(meeting,message)||'(a reunião está começando)'),'',
-        last?'ÚLTIMA FALA DELE — responda a isto: "'+last+'"':'Ele ainda não falou: abra a conversa sobre a pauta com uma posição ou uma pergunta curta.',
-        round.length?'Já falaram nesta rodada (não repita; acrescente algo novo ou escolha entre o que já foi dito): '+round.map(x=>(LABEL[x.persona]||'')+': '+cap(x.text,220)).join(' | '):'',
-        roleFor(key,it),'Responda só como '+LABEL[key]+'.'
-      ].filter(x=>x!==undefined).join('\n');
+      const it=(ms&&ms.qtype==='slots')?null:detectIntent(scope,pauta);
+      const br=ms&&ms.brand?ms.brand:(it&&it.brand?it.brand:(it&&it.brands&&it.brands.length===1?it.brands[0]:workBrand(scope,pauta)));
+      const fx=facts(scope.slice(-3).join(' \n ')||pauta,{texts:scope.slice(-3).concat([pauta]),extraNames:(meeting.wrestlers||[]).concat(st.topic?st.topic.all:[]).concat(ms?ms.conf:[]),brand:br});
+      const ib=intentBlock(it,scope);
+      const parts=[RULES,'',fx,''];
+      if(bb)parts.push(bb,'');
+      if(mb)parts.push(mb,'');
+      if(ib)parts.push(ib,'');
+      parts.push('PAUTA DA REUNIÃO: '+pauta);
+      if(fixed)parts.push('O QUE ELE JÁ FIXOU EM PPV (decisão final, não reabra):\n'+fixed);
+      if(!bb)parts.push('','ÚLTIMAS FALAS DELE (mais recente por último; tudo que ele decidiu vale):\n'+scope.slice(-4).map(t=>'- '+cap(t,260)).join('\n'));
+      parts.push('','CONVERSA ATÉ AGORA:\n'+(transcript(meeting,message,u0)||'(a reunião está começando)'),'');
+      parts.push(last?'ÚLTIMA FALA DELE — responda a isto: "'+last+'"':'Ele ainda não falou: abra a conversa sobre a pauta com uma posição ou uma pergunta curta.');
+      if(round.length)parts.push('Já falaram nesta rodada (reaja a isso, não repita): '+round.map(x=>(LABEL[x.persona]||'')+': '+cap(x.text,220)).join(' | '));
+      if(MODE_LINE[mode])parts.push(MODE_LINE[mode]);
+      const cl=clsLine(st,mode);if(cl)parts.push(cl);
+      parts.push('TAMANHO: '+(LEN[key]||'2 a 4 frases curtas.')+(PASSABLE[key]?' Se não tiver nada NOVO a acrescentar ao que já foi dito, responda somente: [PASSO]':''));
+      const dr=it?'':roleDecision(key,st,mode,true),mr=msRole(key,ms);
+      parts.push(mr||dr||roleFor(key,it,mode),'Responda só como '+LABEL[key]+'.');
+      const base=parts.join('\n');
       const run=async extra=>{
         let out='';
-        await rawSample(base+(extra?'\n\nATENÇÃO: '+extra:''),{engine:K.engine,system:sysFor(key),maxTok:(it?520:380),onText:c=>{try{out=removeRepeatedResponseText(c.text)}catch(e){out=c.text}}});
+        await rawSample(base+(extra?'\n\nATENÇÃO: '+extra:''),{engine:K.engine,system:sysFor(key),maxTok:(it?520:(MAXT[key]||260)),onText:c=>{try{out=removeRepeatedResponseText(c.text)}catch(e){out=c.text}}});
         return out;
       };
-      /* 1ª tentativa é silenciosa: o que aparece na tela já passou na conferência (nada de digitar e apagar) */
       let out=await run('');
-      const bad=validate(out,users.join(' '),peers,it,users,base,key);
+      const bad=validate(out,users.join(' '),peers,it,scope,base,key,mode).concat(decisionProblems(out,st,key,mode)).concat(msProblems(out,ms,key));
       if(bad.length&&meeting.runId===token)out=await run('sua resposta anterior quebrou regras: '+bad.join(' '));
       if(meeting.runId!==token)break;
-      message.text=(it?tidy7(out):tidy(out))||'Sem resposta.';
+      const dropMsg=()=>{const ix=meeting.messages.indexOf(message);if(ix>=0)meeting.messages.splice(ix,1);persist();if(tab==='meeting')render()};
+      if(PASSABLE[key]&&isPass(out)){dropMsg();continue}
+      if(ms&&msProblems(out,ms,key).length){const fb=msFallback(key,ms);if(!fb){dropMsg();continue}out=fb}
+      if(decisionProblems(out,st,key,mode).length){const fb=decisionFallback(key,st);if(!fb){dropMsg();continue}out=fb}
+      message.text=(it?tidy7(out):tidy(out,key))||'Sem resposta.';
+      try{if(window.__plwMem)window.__plwMem.archiveVisiblePersona(meeting,message)}catch(e){}
       try{meetingTrackPersonaIdeas(meeting)}catch(e){}
       persist();if(tab==='meeting')render();
     }
@@ -8546,7 +9194,6 @@ window.meetingRunPanel=async function(phase,userText){
     meeting.messages.push({role:'system',text:'Erro na reunião: '+(error.message||error.code||error)});
   }finally{busy=false;window.__mtgRunning=false;persist();if(tab==='meeting')render()}
 };
-
 
 const prevV=window.vMeeting;
 if(typeof prevV==='function'){
@@ -8602,7 +9249,7 @@ window.pressAskNext=async function(){
 
 
 /* ---------- CHATS INDIVIDUAIS (J.J., Analista, Creative Room, Dirk) ---------- */
-const PLABEL={jj:'J.J. Purple',hal:'Analista PLW',tony:'Creative Room',dirk:'Dirk The Truth'};
+const PLABEL={jj:'J.J. Purple',hal:'Analista PLW',tony:'TONY THEBOI$$',gendo:'Gendo Ikari',dirk:'Dirk The Truth'};
 window.ask=async function(key,text,box){
   const clean=String(text||'').trim();if(!clean)return;
   if(typeof sample==='undefined'&&K.engine!=='ollama'&&K.engine!=='groq'){toast('IA indisponível nesta visualização.');return}
@@ -8614,40 +9261,141 @@ window.ask=async function(key,text,box){
   h.push(user,answer);privateTurnLocks[key]=req;touchChat(key);busy=true;render();
   try{
     const users=h.filter(x=>x!==answer&&x.r==='u').map(x=>x.t);
-    const it=detectIntent(users,'');
-    const br=it&&it.brand?it.brand:(it&&it.brands&&it.brands.length===1?it.brands[0]:workBrand(users,''));
-    const fx=facts(clean,{texts:users.slice(-3),brand:br});
-    const ib=intentBlock(it,users);
-    const hist=h.filter(x=>x!==answer&&x!==user&&x.t).slice(-6).map(x=>(x.r==='u'?'HEAD BOOKER':PLABEL[key]+' (você)')+': '+cap(x.t,500)).join('\n');
-    const prompt=[
-      'Você é '+(PLABEL[key]||'uma persona PLW')+' num chat PRIVADO com o head booker. Só vocês dois. Fale só como você.',
-      RULES,'',fx,'',ib,ib?'':undefined,
-      'ÚLTIMAS FALAS DELE (tudo que ele decidiu vale):\n'+users.slice(-4).map(t=>'- '+cap(t,260)).join('\n'),'',
-      hist?'CONVERSA ATÉ AGORA:\n'+hist:'(início da conversa)','',
-      'MENSAGEM ATUAL DELE — responda a isto: "'+clean+'"',
-      'Se ele te corrigiu ou reclamou, aceite em meia frase e refaça certo. Se ele pediu ideias, nomes ou sugestões, DÊ agora; só pergunte se faltar uma informação sem a qual seria chute.',
-      roleFor(key,it)||'',
-      'Responda uma única vez.'
-    ].filter(x=>x!==undefined).join('\n');
+    let st;try{st=stateFor(key,users);persist()}catch(e){st={topic:null,mode:'open'}}
+    const mode=st.mode||'open';
+    const u0=st.topic?Math.min(st.topic.u0||0,Math.max(0,users.length-1)):0;
+    const scope=users.slice(u0);
+    let bb='';try{bb=mode==='canon'?'':bkBlock(st)}catch(e){}
+    let ms=null;try{ms=mode==='canon'?null:matchState(scope,'',st)}catch(e){console.warn('[V46.1 estado]',e)}
+    const mb=ms?matchBlock(ms):'';
+    const it=(ms&&ms.qtype==='slots')?null:detectIntent(scope,'');
+    const br=ms&&ms.brand?ms.brand:(it&&it.brand?it.brand:(it&&it.brands&&it.brands.length===1?it.brands[0]:workBrand(scope,'')));
+    const fx=facts(clean,{texts:scope.slice(-3),extraNames:(st.topic?st.topic.all:[]).concat(ms?ms.conf:[]),brand:br});
+    const ib=intentBlock(it,scope);
+    let prior=h.filter(x=>x!==answer&&x!==user&&x.t);
+    if(u0>0){let c=0;const k=prior.findIndex(x=>x.r==='u'&&(c++)>=u0);prior=k>=0?prior.slice(k):[]}
+    const hist=prior.slice(-6).map(x=>(x.r==='u'?'HEAD BOOKER':PLABEL[key]+' (você)')+': '+cap(x.t,500)).join('\n');
+    const parts=['Você é '+(PLABEL[key]||'uma persona PLW')+' num chat PRIVADO com o head booker. Só vocês dois. Fale só como você.',RULES,'',fx,''];
+    if(bb)parts.push(bb,'');
+    if(mb)parts.push(mb,'');
+    if(ib)parts.push(ib,'');
+    if(!bb)parts.push('ÚLTIMAS FALAS DELE (tudo que ele decidiu vale):\n'+scope.slice(-4).map(t=>'- '+cap(t,260)).join('\n'),'');
+    parts.push(hist?'CONVERSA ATÉ AGORA:\n'+hist:'(início da conversa)','');
+    parts.push('MENSAGEM ATUAL DELE — responda a isto: "'+clean+'"');
+    parts.push('Se ele pediu ideias, nomes ou sugestões, DÊ agora; só pergunte se faltar uma informação sem a qual seria chute.');
+    if(MODE_LINE[mode])parts.push(MODE_LINE[mode]);
+    const cl=clsLine(st,mode);if(cl)parts.push(cl);
+    parts.push('TAMANHO: '+(LEN[key]||'2 a 4 frases curtas.'));
+    const dr=it?'':roleDecision(key,st,mode,false),mr=msRole(key,ms);
+    parts.push(mr||dr||roleFor(key,it,mode)||'','Responda uma única vez.');
+    const prompt=parts.join('\n');
     const run=async extra=>{
       let out='';
-      await rawSample(prompt+(extra?'\n\nATENÇÃO: '+extra:''),{engine:K.engine,system:sysFor(key),maxTok:it?560:400,
+      await rawSample(prompt+(extra?'\n\nATENÇÃO: '+extra:''),{engine:K.engine,system:sysFor(key),maxTok:it?560:((MAXT[key]||260)+60),
         onText:x=>{try{out=removeRepeatedResponseText(x.text)}catch(e){out=x.text}},
         onStatus:x=>{if(privateTurnLocks[key]===req){answer.s=x;upd(key)}}});
       return out;
     };
     window.__olCut=false;
     let out=await run('');
-    const bad=validate(out,users.join(' '),[],it,users,prompt,key);
+    const bad=validate(out,users.join(' '),[],it,scope,prompt,key,mode).concat(decisionProblems(out,st,key,mode)).concat(msProblems(out,ms,key));
     if(bad.length&&privateTurnLocks[key]===req)out=await run('sua resposta anterior quebrou regras: '+bad.join(' '));
-    answer.t=(it?tidy7(out):tidy(out))||'Sem resposta.';
+    if(ms&&msProblems(out,ms,key).length)out=msFallback(key,ms,true)||out;
+    if(decisionProblems(out,st,key,mode).length)out=decisionFallback(key,st)||out;
+    answer.t=(it?tidy7(out):tidy(out,key))||'Sem resposta.';
     answer.cut=!!window.__olCut;
   }catch(e){answer.t=answer.t||('Erro: '+(e.message||e.code||e))}
   finally{if(privateTurnLocks[key]===req){delete privateTurnLocks[key];busy=false;touchChat(key);render()}}
 };
 
+try{
+  S.bkChats=S.bkChats||{};
+  const saved=JSON.parse(localStorage.getItem('plw-save')||'{}');
+  if(saved&&saved.bkChats&&!Object.keys(S.bkChats).length)S.bkChats=saved.bkChats;
+}catch(e){}
+const _normBk=norm;
+norm=function(x){const y=_normBk(x);y.bkChats=(x&&x.bkChats)||{};return y};
+const _endChatBk=endChat;
+endChat=function(k,n){try{if(S.bkChats)delete S.bkChats[k]}catch(e){}return _endChatBk.apply(this,arguments)};
 
-window.__plwV46={facts,rules:RULES};
-console.log('[PLW] V46 — reunião/coletiva: última fala manda, PPV = luta decisiva, sem "semana N", contexto curto');
+/* ---------- nome exibido da persona criativa: TONY THEBOI$$ ---------- */
+const TONY_LBL='TONY THEBOI$$';
+try{const ti=TABS.findIndex(x=>x[0]==='tony');if(ti>=0)TABS[ti][2]=TONY_LBL}catch(e){}
+try{if(typeof PERS==='object'&&PERS&&PERS.tony)PERS.tony=String(PERS.tony).replace(/THE CREATIVE ROOM|Creative Room/g,()=>TONY_LBL)}catch(e){}
+function relabelTony(root){
+  try{
+    if(!root)return;
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),arr=[];let n;
+    while((n=w.nextNode()))arr.push(n);
+    arr.forEach(t=>{if(t.parentNode&&t.parentNode.nodeName==='TEXTAREA')return;if(/creative room/i.test(t.nodeValue))t.nodeValue=t.nodeValue.replace(/(?:the\s+)?creative room/gi,()=>TONY_LBL)});
+  }catch(e){}
+}
+try{
+  const _rdTony=render;
+  render=function(){const r=_rdTony.apply(this,arguments);relabelTony(document.getElementById('v'));relabelTony(document.getElementById('nav'));return r};
+}catch(e){}
+
+window.__plwV46={facts,rules:RULES,stateFor,bkBlock,classify:bkClass,decisions:st=>(st&&st.decisions)||[],matchState,matchBlock,msScan,msQType,msProblems,msFallback};
+console.log('[PLW] V46.1 — ESTADO DA LUTA (evento/título/stip/confirmados/vagas/inelegíveis/pergunta) antes das personas; V46 — reunião JJ → Creative → Gendo → Analista; CANON (save) / CURRENT / BOOKING (memória da conversa); chats privados com a mesma memória; AUTORIDADE DO HEAD BOOKER (QUESTION/PROPOSAL/DECISION + memória de decisões)');
+})();
+</script>
+<script>
+/* ===== SAVE EM PASTA: escolhe a pasta uma vez; botão 🔄 lê o arquivo mais recente e atualiza o app ===== */
+(function(){
+'use strict';
+if(window.__PLW_SAVEDIR__)return;window.__PLW_SAVEDIR__=true;
+const OK=typeof window.showDirectoryPicker==='function';
+const EXT=/\.(txt|gz|json|sav|save)$/i;
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('plw-savedir',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function hGet(){try{const d=await idb();return await new Promise(res=>{const q=d.transaction('h').objectStore('h').get('dir');q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch(e){return null}}
+async function hSet(h){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('h','readwrite');t.objectStore('h').put(h,'dir');t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function hDel(){try{const d=await idb();const t=d.transaction('h','readwrite');t.objectStore('h').delete('dir')}catch(e){}}
+async function perm(h,ask){
+  const o={mode:'read'};
+  if((await h.queryPermission(o))==='granted')return true;
+  return ask&&(await h.requestPermission(o))==='granted';
+}
+async function newest(h){
+  let best=null;
+  for await(const [name,e] of h.entries()){
+    if(e.kind!=='file'||!EXT.test(name))continue;
+    const f=await e.getFile();
+    if(!best||f.lastModified>best.lastModified)best=f;
+  }
+  return best;
+}
+window.saveDirPick=async function(){
+  if(!OK)return toast('Esse navegador não deixa vincular pasta. Use Chrome ou Edge no computador.');
+  try{
+    const h=await window.showDirectoryPicker({id:'plw-save',mode:'read'});
+    await hSet(h);
+    toast('📁 Pasta vinculada: '+h.name);
+    await window.saveDirRefresh();
+  }catch(e){if(e&&e.name!=='AbortError')toast('Não consegui vincular a pasta: '+(e.message||e.name))}
+};
+window.saveDirRefresh=async function(){
+  if(!OK)return toast('Esse navegador não deixa ler pasta. Use Chrome ou Edge no computador.');
+  const h=await hGet();
+  if(!h)return window.saveDirPick();
+  try{
+    if(!(await perm(h,true)))return toast('Sem permissão para ler a pasta. Toque em 🔄 de novo e permita.');
+    const f=await newest(h);
+    if(!f)return toast('Nenhum arquivo de save (.txt, .gz, .json) na pasta '+h.name+'.');
+    toast('🔄 Lendo '+f.name+'...');
+    await readSave(f);
+    try{localStorage.setItem('plw-savedir-last',JSON.stringify({name:f.name,mod:f.lastModified,at:Date.now()}))}catch(e){}
+    if(typeof render==='function')render();
+  }catch(e){toast('Erro ao atualizar: '+(e.message||e.name))}
+};
+window.saveDirForget=async function(){await hDel();try{localStorage.removeItem('plw-savedir-last')}catch(e){}toast('Pasta desvinculada.');if(typeof render==='function')render()};
+function card(){
+  let last=null;try{last=JSON.parse(localStorage.getItem('plw-savedir-last')||'null')}catch(e){}
+  const info=last?'Última leitura: <b>'+String(last.name).replace(/[<>&]/g,'')+'</b> (arquivo de '+new Date(last.mod).toLocaleString('pt-BR')+')':'Ainda não atualizou por aqui.';
+  if(!OK)return '<div class="card"><h3>📁 Save em pasta</h3><div class="mut">Esse navegador não suporta vincular pasta. No Chrome ou Edge do computador funciona.</div></div>';
+  return '<div class="card"><h3>📁 Save em pasta</h3><div class="mut">Deixe o save do jogo numa pasta. Vincule uma vez; depois, sempre que baixar um save novo lá, é só tocar em Atualizar (lê o arquivo mais recente da pasta).</div><div class="mut" style="margin-top:6px">'+info+'</div><div class="row" style="margin-top:8px"><button class="btn o" onclick="saveDirRefresh()">🔄 Atualizar save</button><button class="btn s" onclick="saveDirPick()">Escolher pasta</button><button class="btn s" onclick="saveDirForget()">Desvincular</button></div></div>';
+}
+const _v=window.vSys;
+if(typeof _v==='function')window.vSys=vSys=function(){return _v.apply(this,arguments)+card()};
+console.log('[PLW] Save em pasta pronto ('+(OK?'suportado':'navegador sem suporte')+')');
 })();
 </script>
